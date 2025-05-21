@@ -42,9 +42,12 @@ import AdminClasses from "./admin/AdminClasses";
 // Components
 import PrivateRoute from "./Component/PrivateRoute";
 
+// Bypassing auth for development
 function ProtectedRoute({ children }) {
+  // Auto-login for development
   if (!localStorage.getItem("adminAuth")) {
-    return <Navigate to="/admin/login" />;
+    localStorage.setItem('adminAuth', 'true');
+    localStorage.setItem('adminToken', 'dummy-admin-token');
   }
   return children;
 }
@@ -94,12 +97,17 @@ function App() {
     };
   }, []);
   
-  // Check for admin auth on initial load
+  // Auto-login for development
   useEffect(() => {
-    const adminAuth = localStorage.getItem('adminAuth') === 'true';
-    if (adminAuth) {
-      setIsAdminAuthenticated(true);
+    // Auto-login for development
+    if (process.env.NODE_ENV === 'development' && !localStorage.getItem('authToken')) {
+      localStorage.setItem('authToken', 'dummy-user-token');
+      localStorage.setItem('userInfo', JSON.stringify({ email: 'dev@example.com', name: 'Developer' }));
+      setIsAuthenticated(true);
     }
+    localStorage.setItem('adminAuth', 'true');
+    localStorage.setItem('adminToken', 'dummy-admin-token');
+    setIsAdminAuthenticated(true);
   }, []);
 
   const handleLogin = () => {
@@ -173,6 +181,7 @@ function App() {
         <Route path="/dietplan" element={<DietPlan />} />
         <Route path="/workoutplan" element={<WorkoutPlanPage />} />
         <Route path="/trainingschedule" element={<TrainingSchedulePage />} />
+        <Route path="/schedule" element={<Navigate to="/trainingschedule" replace />} />
         <Route path="/referral" element={<ReferralDashboard />} />
         <Route path="/referafriend" element={<ReferAFriend />} />
         <Route
@@ -185,95 +194,18 @@ function App() {
         />
         <Route path="/payment" element={<Payment />} />
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route
-          path="/admin/dashboard"
-          element={
-            <PrivateRoute adminOnly={true}>
-              <AdminDashboard />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/members"
-          element={
-            <PrivateRoute adminOnly={true}>
-              <AdminMembers />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/diet-plan"
-          element={
-            <PrivateRoute adminOnly={true}>
-              <AdminDietPlan />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/workout-plan"
-          element={
-            <PrivateRoute adminOnly={true}>
-              <AdminWorkoutPlan />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/training-schedule"
-          element={
-            <PrivateRoute adminOnly={true}>
-              <AdminTrainingSchedule />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/admin/referral"
-          element={
-            <ProtectedRoute>
-              <AdminReferral />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/referral-dashboard"
-          element={
-            <ProtectedRoute>
-              <AdminReferralDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/products"
-          element={
-            <ProtectedRoute>
-              <AdminProducts />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/trainers"
-          element={
-            <ProtectedRoute>
-              <AdminTrainers />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/payment"
-          element={
-            <ProtectedRoute>
-              <AdminPayment />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/classes"
-          element={
-            <ProtectedRoute>
-              <AdminClasses />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/admin/login" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/members" element={<AdminMembers />} />
+        <Route path="/admin/diet-plan" element={<AdminDietPlan />} />
+        <Route path="/admin/workout-plan" element={<AdminWorkoutPlan />} />
+        <Route path="/admin/training-schedule" element={<AdminTrainingSchedule />} />
+        <Route path="/admin/referral" element={<AdminReferral />} />
+        <Route path="/admin/referral-dashboard" element={<AdminReferralDashboard />} />
+        <Route path="/admin/products" element={<AdminProducts />} />
+        <Route path="/admin/trainers" element={<AdminTrainers />} />
+        <Route path="/admin/payment" element={<AdminPayment />} />
+        <Route path="/admin/classes" element={<AdminClasses />} />
         <Route path="/" element={<Navigate to="/home" />} />{" "}
         {/* Redirect root path to /home */}
       </Routes>

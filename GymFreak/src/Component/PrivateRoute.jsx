@@ -8,6 +8,11 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
   const [isValid, setIsValid] = useState(null);
   const location = useLocation();
   
+  // Bypass auth in development
+  if (process.env.NODE_ENV === 'development') {
+    return children;
+  }
+  
   useEffect(() => {
     const checkAuth = async () => {
       try {

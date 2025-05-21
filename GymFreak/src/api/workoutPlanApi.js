@@ -1,68 +1,99 @@
-import axios from "axios";
-import { getAccessToken, getAdminToken } from "../utils/auth";
+// Dummy data for workout plans
+let workoutPlans = [
+  {
+    id: '1',
+    name: 'Beginner Full Body',
+    description: 'A full body workout for beginners',
+    difficulty: 'Beginner',
+    duration: 45,
+    exercises: [
+      { name: 'Push-ups', sets: 3, reps: '10-12' },
+      { name: 'Bodyweight Squats', sets: 3, reps: '12-15' },
+      { name: 'Dumbbell Rows', sets: 3, reps: '10-12' },
+      { name: 'Plank', sets: 3, duration: '30 seconds' }
+    ]
+  },
+  {
+    id: '2',
+    name: 'Advanced Strength',
+    description: 'Advanced strength training program',
+    difficulty: 'Advanced',
+    duration: 60,
+    exercises: [
+      { name: 'Barbell Squats', sets: 4, reps: '6-8' },
+      { name: 'Bench Press', sets: 4, reps: '6-8' },
+      { name: 'Deadlifts', sets: 3, reps: '5' },
+      { name: 'Pull-ups', sets: 3, reps: '8-10' }
+    ]
+  }
+];
 
-const BASE_URL = "http://localhost:8080/api/workout-plans";
+// User workout plan assignments { userId: [planId1, planId2, ...] }
+const userWorkoutPlans = {};
+
+// Simulate API delay
+const simulateApiCall = (data) => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve({ data }), 500);
+  });
+};
 
 export const getWorkoutPlans = async () => {
-  const res = await axios.get(BASE_URL);
-  return res.data;
+  return simulateApiCall([...workoutPlans]);
 };
 
 export const createWorkoutPlan = async (plan) => {
-  const token = getAdminToken();
-  const res = await axios.post(BASE_URL, plan, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
+  const newPlan = {
+    ...plan,
+    id: Date.now().toString(),
+    exercises: plan.exercises || []
+  };
+  workoutPlans.unshift(newPlan);
+  return simulateApiCall(newPlan);
 };
 
-export const updateWorkoutPlan = async (id, plan) => {
-  const token = getAdminToken();
-  const res = await axios.put(`${BASE_URL}/${id}`, plan, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
+export const updateWorkoutPlan = async (id, updates) => {
+  const index = workoutPlans.findIndex(plan => plan.id === id);
+  if (index !== -1) {
+    workoutPlans[index] = { ...workoutPlans[index], ...updates };
+    return simulateApiCall(workoutPlans[index]);
+  }
+  throw new Error('Workout plan not found');
 };
 
 export const deleteWorkoutPlan = async (id) => {
-  const token = getAdminToken();
-  const res = await axios.delete(`${BASE_URL}/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
+  const index = workoutPlans.findIndex(plan => plan.id === id);
+  if (index !== -1) {
+    const [deletedPlan] = workoutPlans.splice(index, 1);
+    // Remove this plan from all users' assignments
+    Object.keys(userWorkoutPlans).forEach(userId => {
+      userWorkoutPlans[userId] = userWorkoutPlans[userId].filter(planId => planId !== id);
+    });
+    return simulateApiCall(deletedPlan);
+  }
+  throw new Error('Workout plan not found');
 };
 
 export const getUserWorkoutPlan = async (userId) => {
-  const token = getAccessToken();
-  const res = await axios.get(`${BASE_URL}/user/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
+  const userPlans = (userWorkoutPlans[userId] || []).map(planId => 
+    workoutPlans.find(p => p.id === planId)
+  ).filter(Boolean);
+  return simulateApiCall(userPlans);
 };
 
 export const setUserWorkoutPlan = async (userId, planIds) => {
-  const token = getAccessToken();
-  const res = await axios.post(
-    `${BASE_URL}/user/${userId}`,
-    { planIds },
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
+  userWorkoutPlans[userId] = [...new Set(planIds)]; // Remove duplicates
+  return simulateApiCall({ success: true });
 };
 
 export const removeUserWorkoutPlan = async (userId, planId) => {
-  const token = getAccessToken();
-  const res = await axios.delete(
-    `${BASE_URL}/user/${userId}/plans/${planId}`,
-    { headers: { Authorization: `Bearer ${token}` } }
-  );
-  return res.data;
+  if (userWorkoutPlans[userId]) {
+    userWorkoutPlans[userId] = userWorkoutPlans[userId].filter(id => id !== planId);
+  }
+  return simulateApiCall({ success: true });
 };
 
 export const unsetUserWorkoutPlan = async (userId) => {
-  const token = getAccessToken();
-  const res = await axios.delete(`${BASE_URL}/user/${userId}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return res.data;
+  delete userWorkoutPlans[userId];
+  return simulateApiCall({ success: true });
 };
