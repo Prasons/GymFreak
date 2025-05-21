@@ -1,5 +1,40 @@
 import React, { useEffect, useState } from "react";
-import axiosInstance from "../api/axiosInstance"; // Use shared axios instance
+import { toast } from "react-toastify";
+
+// Mock data for development
+const mockMembers = [
+  { id: 1, name: "John Doe", email: "john@example.com", status: "Active" },
+  { id: 2, name: "Jane Smith", email: "jane@example.com", status: "Inactive" },
+  { id: 3, name: "Bob Johnson", email: "bob@example.com", status: "Active" },
+  { id: 4, name: "Alice Brown", email: "alice@example.com", status: "Active" },
+  { id: 5, name: "Charlie Wilson", email: "charlie@example.com", status: "Inactive" },
+];
+
+// Mock API functions
+const mockApi = {
+  getMembers: () => new Promise((resolve) => setTimeout(() => resolve([...mockMembers]), 500)),
+  updateStatus: (id, status) => new Promise((resolve) => {
+    const memberIndex = mockMembers.findIndex(m => m.id === id);
+    if (memberIndex !== -1) {
+      mockMembers[memberIndex].status = status;
+    }
+    setTimeout(() => resolve({ success: true }), 300);
+  }),
+  updateMember: (id, data) => new Promise((resolve) => {
+    const memberIndex = mockMembers.findIndex(m => m.id === id);
+    if (memberIndex !== -1) {
+      mockMembers[memberIndex] = { ...mockMembers[memberIndex], ...data };
+    }
+    setTimeout(() => resolve({ success: true }), 300);
+  }),
+  deleteMember: (id) => new Promise((resolve) => {
+    const memberIndex = mockMembers.findIndex(m => m.id === id);
+    if (memberIndex !== -1) {
+      mockMembers.splice(memberIndex, 1);
+    }
+    setTimeout(() => resolve({ success: true }), 300);
+  })
+};
 
 const AdminMembers = () => {
   const [members, setMembers] = useState([]);
@@ -16,13 +51,12 @@ const AdminMembers = () => {
     setLoading(true);
     setError("");
     try {
-      // Use shared axios instance, which adds the correct Authorization header
-      const res = await axiosInstance.get("/users");
-      setMembers(Array.isArray(res.data) ? res.data : []);
-      console.log("members", res.data);
+      const data = await mockApi.getMembers();
+      setMembers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching members:", err);
       setError("Failed to load members. Please try again later.");
+      toast.error("Failed to load members");
     } finally {
       setLoading(false);
     }
@@ -31,14 +65,13 @@ const AdminMembers = () => {
   const handleToggleStatus = async (id, status) => {
     try {
       const newStatus = status === "Active" ? "Inactive" : "Active";
-      await axiosInstance.patch(
-        `/users/${id}/status`,
-        { status: newStatus }
-      );
+      await mockApi.updateStatus(id, newStatus);
       fetchMembers();
+      toast.success(`Member status updated to ${newStatus}`);
     } catch (error) {
       console.error("Error updating status:", error);
       setError("Failed to update status. Please try again.");
+      toast.error("Failed to update status");
     }
   };
 
@@ -53,26 +86,30 @@ const AdminMembers = () => {
 
   const handleEditSave = async (id) => {
     try {
-      await axiosInstance.put(
-        `/users/${id}`,
-        { name: editForm.name, email: editForm.email }
-      );
+      await mockApi.updateMember(id, {
+        name: editForm.name,
+        email: editForm.email,
+      });
       setEditId(null);
       fetchMembers();
+      toast.success("Member updated successfully");
     } catch (error) {
       console.error("Error updating member:", error);
       setError("Failed to update member. Please try again.");
+      toast.error("Failed to update member");
     }
   };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this member?")) return;
     try {
-      await axiosInstance.delete(`/users/${id}`);
+      await mockApi.deleteMember(id);
       fetchMembers();
+      toast.success("Member deleted successfully");
     } catch (error) {
       console.error("Error deleting member:", error);
       setError("Failed to delete member. Please try again.");
+      toast.error("Failed to delete member");
     }
   };
 
@@ -142,14 +179,20 @@ const AdminMembers = () => {
                         className="flex items-center gap-1 px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded shadow transition"
                         title="Save"
                       >
-                        <span role="img" aria-label="save">💾</span> Save
+                        <span role="img" aria-label="save">
+                          💾
+                        </span>{" "}
+                        Save
                       </button>
                       <button
                         onClick={() => setEditId(null)}
                         className="flex items-center gap-1 px-3 py-1 bg-gray-500 hover:bg-gray-700 text-white rounded shadow transition"
                         title="Cancel"
                       >
-                        <span role="img" aria-label="cancel">❌</span> Cancel
+                        <span role="img" aria-label="cancel">
+                          ❌
+                        </span>{" "}
+                        Cancel
                       </button>
                     </>
                   ) : (
@@ -159,21 +202,36 @@ const AdminMembers = () => {
                         className="flex items-center gap-1 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded shadow transition"
                         title="Edit"
                       >
-                        <span role="img" aria-label="edit">✏️</span> Edit
+                        <span role="img" aria-label="edit">
+                          ✏️
+                        </span>{" "}
+                        Edit
                       </button>
                       <button
-                        onClick={() => handleToggleStatus(member.id, member.status)}
-                        className={`flex items-center gap-1 px-3 py-1 ${member.status === "Active" ? "bg-yellow-500 hover:bg-yellow-600" : "bg-green-500 hover:bg-green-600"} text-white rounded shadow transition`}
+                        onClick={() =>
+                          handleToggleStatus(member.id, member.status)
+                        }
+                        className={`flex items-center gap-1 px-3 py-1 ${
+                          member.status === "Active"
+                            ? "bg-yellow-500 hover:bg-yellow-600"
+                            : "bg-green-500 hover:bg-green-600"
+                        } text-white rounded shadow transition`}
                         title="Toggle Status"
                       >
-                        <span role="img" aria-label="toggle">🔄</span> {member.status === "Active" ? "Deactivate" : "Activate"}
+                        <span role="img" aria-label="toggle">
+                          🔄
+                        </span>{" "}
+                        {member.status === "Active" ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         onClick={() => handleDelete(member.id)}
                         className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded shadow transition"
                         title="Delete"
                       >
-                        <span role="img" aria-label="delete">🗑️</span> Delete
+                        <span role="img" aria-label="delete">
+                          🗑️
+                        </span>{" "}
+                        Delete
                       </button>
                     </>
                   )}

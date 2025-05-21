@@ -19,10 +19,14 @@ const TrainingSchedulePage = () => {
     const fetchSchedules = async () => {
       setLoading(true);
       try {
-        const data = await getTrainingSchedules();
-        setSchedules(data);
+        const response = await getTrainingSchedules();
+        // Handle both array response and object with data property
+        const schedulesData = Array.isArray(response) ? response : (response?.data || []);
+        setSchedules(schedulesData);
       } catch (err) {
+        console.error("Error fetching training schedules:", err);
         setError("Failed to load training schedules");
+        setSchedules([]);
       }
       setLoading(false);
     };
@@ -32,19 +36,24 @@ const TrainingSchedulePage = () => {
   useEffect(() => {
     const fetchUserSchedules = async () => {
       try {
-        const data = await getUserTrainingSchedules();
-        if (Array.isArray(data)) {
-          setUserSchedules(data);
-          setSelectedIds(data.map((s) => s.id));
-        } else if (data && typeof data === "object") {
-          setUserSchedules([data]);
-          setSelectedIds([data.id]);
+        const response = await getUserTrainingSchedules();
+        // Handle both array response and object with data property
+        const userSchedulesData = Array.isArray(response) ? response : (response?.data || []);
+        
+        if (Array.isArray(userSchedulesData) && userSchedulesData.length > 0) {
+          setUserSchedules(userSchedulesData);
+          setSelectedIds(userSchedulesData.map((s) => s.id));
+        } else if (userSchedulesData && typeof userSchedulesData === "object") {
+          setUserSchedules([userSchedulesData]);
+          setSelectedIds([userSchedulesData.id]);
         } else {
           setUserSchedules([]);
           setSelectedIds([]);
         }
-      } catch {
-        // ignore
+      } catch (err) {
+        console.error("Error fetching user schedules:", err);
+        setUserSchedules([]);
+        setSelectedIds([]);
       }
     };
     fetchUserSchedules();

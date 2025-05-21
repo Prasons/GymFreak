@@ -1,19 +1,106 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getProducts, createProduct, deleteProduct } from '../api/productApi';
-import { isAdmin } from '../utils/auth';
-import { toast } from 'react-toastify';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+// Mock data for development
+const mockProducts = [
+  {
+    id: 1,
+    name: 'Premium Protein Powder',
+    description: 'High-quality whey protein for muscle recovery',
+    price: 49.99,
+    category: 'Supplements',
+    image: 'https://via.placeholder.com/150',
+    stock_quantity: 50
+  },
+  {
+    id: 2,
+    name: 'Yoga Mat',
+    description: 'Non-slip yoga mat for all types of exercises',
+    price: 29.99,
+    category: 'Equipment',
+    image: 'https://via.placeholder.com/150',
+    stock_quantity: 30
+  },
+  {
+    id: 3,
+    name: 'Resistance Bands Set',
+    description: 'Set of 5 resistance bands for strength training',
+    price: 24.99,
+    category: 'Accessories',
+    image: 'https://via.placeholder.com/150',
+    stock_quantity: 45
+  },
+  {
+    id: 4,
+    name: 'Gym Gloves',
+    description: 'Padded gloves for better grip and protection',
+    price: 19.99,
+    category: 'Accessories',
+    image: 'https://via.placeholder.com/150',
+    stock_quantity: 60
+  },
+  {
+    id: 5,
+    name: 'Shaker Bottle',
+    description: 'BPA-free shaker for your protein shakes',
+    price: 9.99,
+    category: 'Accessories',
+    image: 'https://via.placeholder.com/150',
+    stock_quantity: 100
+  }
+];
+
+// Mock API functions
+const getProducts = async () => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve([...mockProducts]), 500);
+  });
+};
+
+const createProduct = async (formData) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const newProduct = {
+        id: mockProducts.length + 1,
+        name: formData.get('name'),
+        description: formData.get('description'),
+        price: parseFloat(formData.get('price')),
+        category: formData.get('category'),
+        stock_quantity: parseInt(formData.get('stock_quantity')),
+        image: 'https://via.placeholder.com/150'
+      };
+      mockProducts.push(newProduct);
+      resolve(newProduct);
+    }, 500);
+  });
+};
+
+const deleteProduct = async (id) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const index = mockProducts.findIndex(p => p.id === id);
+      if (index > -1) {
+        mockProducts.splice(index, 1);
+      }
+      resolve();
+    }, 500);
+  });
+};
+
+const isAdmin = () => true; // Always return true for development
+
+import { toast } from "react-toastify";
 import {
   FiTrash2,
   FiPlus,
-  FiUpload,
   FiDollarSign,
   FiTag,
+  FiEdit,
+  FiUpload,
   FiInfo,
   FiLoader,
   FiAlertCircle,
-  FiCheckCircle
-} from 'react-icons/fi';
+  FiCheckCircle,
+} from "react-icons/fi";
 
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
@@ -31,37 +118,25 @@ const AdminProducts = () => {
 
   useEffect(() => {
     const fetchProducts = async () => {
-      // Check admin status
-      if (!isAdmin()) {
-        toast.error('Unauthorized access. Redirecting to login...');
-        navigate('/login');
-        return;
-      }
-
       setIsLoading(true);
+      setError(null);
+
       try {
         const data = await getProducts();
-        if (Array.isArray(data)) {
-          setProducts(data);
-          setError(null);
-        } else {
-          console.error('API response is not an array:', data);
-          setProducts([]);
-          setError('Invalid data format received from server');
-          toast.error('Received invalid data format from server');
-        }
+        setProducts(data);
+        setError(null);
       } catch (err) {
-        console.error('Failed to fetch products', err);
-        setProducts([]);
-        setError('Failed to load products. Please try again.');
-        toast.error('Failed to load products');
+        console.error("Failed to fetch products", err);
+        setProducts(mockProducts); // Fallback to mock data
+        setError("Using mock data for development");
+        toast.info("Using mock data for development");
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchProducts();
-  }, [navigate]);
+  }, []);
 
   const handleInputChange = (e) => {
     setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
@@ -74,114 +149,84 @@ const AdminProducts = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
 
-    // Check admin status
-    if (!isAdmin()) {
-      toast.error('You do not have permission to add products');
-      navigate('/login');
-      return;
-    }
-
-    // Validate required fields
+    // Validate form
     if (!newProduct.name || !newProduct.price || !newProduct.category) {
-      setError('Please fill in all required fields');
-      toast.error('Please fill in all required fields');
+      setError("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
 
-    if (!newProduct.image) {
-      setError('Please select an image');
-      toast.error('Please select an image');
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('name', newProduct.name);
-    formData.append('description', newProduct.description || '');
-    formData.append('price', newProduct.price);
-    formData.append('category', newProduct.category);
-    formData.append('stock_quantity', '10');
-    formData.append('image', newProduct.image);
+    const newProductData = {
+      ...newProduct,
+      id: Math.max(0, ...mockProducts.map(p => p.id)) + 1,
+      image: 'https://via.placeholder.com/150',
+      stock_quantity: 10
+    };
 
     try {
       setIsSubmitting(true);
-      setError(null);
-      
-      // Show loading toast
-      const toastId = toast.loading('Adding product...');
-      
-      await createProduct(formData);
-      
-      // Update the products list
-      const data = await getProducts();
-      setProducts(data);
-      
+      const toastId = toast.loading("Adding product...");
+
+      // Add to mock data
+      mockProducts.push(newProductData);
+      setProducts([...mockProducts]);
+
       // Reset form
       setNewProduct({
-        name: '',
-        description: '',
-        price: '',
-        category: '',
-        image: null,
+        name: "",
+        description: "",
+        price: "",
+        category: "",
+        image: "",
       });
-      
+
       // Clear file input
-      const fileInput = document.getElementById('image-upload');
-      if (fileInput) fileInput.value = '';
-      
+      const fileInput = document.getElementById("image-upload");
+      if (fileInput) fileInput.value = "";
+
       // Show success message
       toast.update(toastId, {
-        render: 'Product added successfully!',
-        type: 'success',
+        render: "Product added successfully!",
+        type: "success",
         isLoading: false,
         autoClose: 3000,
       });
     } catch (error) {
-      console.error('Error adding product:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to add product. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      console.error("Error adding product:", error);
+      setError("Failed to add product. Please try again.");
+      toast.error("Failed to add product");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this product?')) {
-      return;
-    }
-
-    // Check admin status
-    if (!isAdmin()) {
-      toast.error('You do not have permission to delete products');
-      navigate('/login');
+    if (!window.confirm("Are you sure you want to delete this product?")) {
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Show loading toast
-      const toastId = toast.loading('Deleting product...');
-      
-      await deleteProduct(id);
-      
-      // Update the products list
-      const data = await getProducts();
-      setProducts(data);
-      
-      // Show success message
+      const toastId = toast.loading("Deleting product...");
+
+      // Remove from mock data
+      const index = mockProducts.findIndex(p => p.id === id);
+      if (index > -1) {
+        mockProducts.splice(index, 1);
+        setProducts([...mockProducts]);
+      }
+
       toast.update(toastId, {
-        render: 'Product deleted successfully!',
-        type: 'success',
+        render: "Product deleted successfully!",
+        type: "success",
         isLoading: false,
         autoClose: 3000,
       });
     } catch (error) {
-      console.error('Error deleting product:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to delete product. Please try again.';
-      setError(errorMessage);
-      toast.error(errorMessage);
+      console.error("Error deleting product:", error);
+      setError("Failed to delete product. Please try again.");
+      toast.error("Failed to delete product");
     } finally {
       setIsLoading(false);
     }
@@ -335,8 +380,8 @@ const AdminProducts = () => {
                       image: "",
                     });
                     setError(null);
-                    const fileInput = document.getElementById('image-upload');
-                    if (fileInput) fileInput.value = '';
+                    const fileInput = document.getElementById("image-upload");
+                    if (fileInput) fileInput.value = "";
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                   disabled={isSubmitting}
@@ -347,7 +392,7 @@ const AdminProducts = () => {
                   type="submit"
                   disabled={isSubmitting}
                   className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition ${
-                    isSubmitting ? 'opacity-75 cursor-not-allowed' : ''
+                    isSubmitting ? "opacity-75 cursor-not-allowed" : ""
                   }`}
                 >
                   {isSubmitting ? (
@@ -356,7 +401,7 @@ const AdminProducts = () => {
                       Adding...
                     </>
                   ) : (
-                    'Add Product'
+                    "Add Product"
                   )}
                 </button>
               </div>

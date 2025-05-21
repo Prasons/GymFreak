@@ -1,10 +1,69 @@
 import React, { useEffect, useState } from "react";
-import {
-  getWorkoutPlans,
-  createWorkoutPlan,
-  updateWorkoutPlan,
-  deleteWorkoutPlan,
-} from "../api/workoutPlanApi";
+import { toast } from "react-toastify";
+
+// Mock data for workout plans
+let mockWorkoutPlans = [
+  {
+    id: 1,
+    name: "Beginner Full Body",
+    description: "A full body workout plan for beginners",
+    difficulty_level: "beginner",
+    duration_weeks: 4,
+    target_goals: ["General Fitness", "Weight Loss"],
+    is_public: true
+  },
+  {
+    id: 2,
+    name: "Advanced Strength",
+    description: "Advanced strength training program",
+    difficulty_level: "advanced",
+    duration_weeks: 8,
+    target_goals: ["Strength", "Muscle Gain"],
+    is_public: true
+  }
+];
+
+// Mock API functions
+const getWorkoutPlans = async () => {
+  return new Promise(resolve => {
+    setTimeout(() => resolve([...mockWorkoutPlans]), 500);
+  });
+};
+
+const createWorkoutPlan = async (plan) => {
+  return new Promise(resolve => {
+    const newPlan = {
+      ...plan,
+      id: Math.max(0, ...mockWorkoutPlans.map(p => p.id)) + 1
+    };
+    mockWorkoutPlans.push(newPlan);
+    setTimeout(() => resolve(newPlan), 300);
+  });
+};
+
+const updateWorkoutPlan = async (id, updates) => {
+  return new Promise(resolve => {
+    const index = mockWorkoutPlans.findIndex(p => p.id === id);
+    if (index !== -1) {
+      mockWorkoutPlans[index] = { ...mockWorkoutPlans[index], ...updates };
+      setTimeout(() => resolve(mockWorkoutPlans[index]), 300);
+    } else {
+      throw new Error('Workout plan not found');
+    }
+  });
+};
+
+const deleteWorkoutPlan = async (id) => {
+  return new Promise(resolve => {
+    const initialLength = mockWorkoutPlans.length;
+    mockWorkoutPlans = mockWorkoutPlans.filter(p => p.id !== id);
+    if (mockWorkoutPlans.length < initialLength) {
+      setTimeout(() => resolve({ success: true }), 300);
+    } else {
+      throw new Error('Workout plan not found');
+    }
+  });
+};
 
 const AdminWorkoutPlan = () => {
   const [workoutPlans, setWorkoutPlans] = useState([]);
@@ -30,14 +89,32 @@ const AdminWorkoutPlan = () => {
       const plans = await getWorkoutPlans();
       setWorkoutPlans(plans);
     } catch (err) {
+      console.error("Error fetching workout plans:", err);
       setError("Failed to load workout plans");
+      toast.error("Failed to load workout plans");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleNumberChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: Number(value) }));
+  };
+
+  const handleTargetGoalsChange = (e) => {
+    const { value, checked } = e.target;
+    setForm(prev => ({
+      ...prev,
+      target_goals: checked
+        ? [...prev.target_goals, value]
+        : prev.target_goals.filter(goal => goal !== value)
+    }));
   };
 
   const handleExercisesChange = (e) => {

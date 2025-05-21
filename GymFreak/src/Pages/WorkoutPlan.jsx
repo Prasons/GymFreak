@@ -18,10 +18,12 @@ const WorkoutPlanPage = () => {
     const fetchPlans = async () => {
       setLoading(true);
       try {
-        const plans = await getWorkoutPlans();
+        const response = await getWorkoutPlans();
+        const plans = Array.isArray(response) ? response : response?.data || [];
         setWorkoutPlans(plans);
-      } catch (err) {
+      } catch {
         setError("Failed to load workout plans");
+        setWorkoutPlans([]);
       }
       setLoading(false);
     };
@@ -42,8 +44,8 @@ const WorkoutPlanPage = () => {
           setUserPlans([]);
           setSelectedPlanIds([]);
         }
-      } catch (err) {
-        // ignore
+      } catch {
+        // ignore errors
       }
     };
     fetchUserPlans();
@@ -51,7 +53,9 @@ const WorkoutPlanPage = () => {
 
   const handleSelectPlan = (planId) => {
     setSelectedPlanIds((prev) =>
-      prev.includes(planId) ? prev.filter((id) => id !== planId) : [...prev, planId]
+      prev.includes(planId)
+        ? prev.filter((id) => id !== planId)
+        : [...prev, planId]
     );
   };
 
@@ -59,134 +63,225 @@ const WorkoutPlanPage = () => {
     setSaving(true);
     try {
       await setUserWorkoutPlan(selectedPlanIds);
-      const selectedPlans = workoutPlans.filter((p) => selectedPlanIds.includes(p.id));
-      setUserPlans(selectedPlans);
-    } catch (err) {
-      setError("Failed to save selected workout plans");
+      setUserPlans(workoutPlans.filter((p) => selectedPlanIds.includes(p.id)));
+      setError("");
+    } catch {
+      setError("Failed to save your workout plans.");
     }
     setSaving(false);
   };
 
-  // Delete all user's selected workout plans
   const handleDeleteUserPlan = async () => {
-    if (!window.confirm("Are you sure you want to remove all your selected workout plans?")) return;
+    if (
+      !window.confirm("Are you sure you want to remove all your workout plans?")
+    )
+      return;
     setSaving(true);
     try {
-      await setUserWorkoutPlan([]); // This will clear all selections
+      await setUserWorkoutPlan([]);
       setUserPlans([]);
       setSelectedPlanIds([]);
-    } catch (err) {
-      setError("Failed to delete your selected workout plans");
+      setError("");
+    } catch {
+      setError("Failed to remove workout plans.");
     }
     setSaving(false);
   };
 
-  // Remove a single workout plan from user's selection
   const handleRemoveSinglePlan = async (planId) => {
-    if (!window.confirm("Remove this workout plan from your selection?")) return;
+    if (!window.confirm("Remove this workout plan?")) return;
     setSaving(true);
     try {
       await removeUserWorkoutPlan(planId);
       setUserPlans((prev) => prev.filter((p) => p.id !== planId));
       setSelectedPlanIds((prev) => prev.filter((id) => id !== planId));
-    } catch (err) {
-      setError("Failed to remove the workout plan");
+      setError("");
+    } catch {
+      setError("Failed to remove this workout plan.");
     }
     setSaving(false);
   };
 
   return (
-    <div className="py-10 px-4 max-w-4xl mx-auto min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      <h2 className="text-3xl font-bold mb-8 text-center text-primary">Explore Workout Plans</h2>
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <span className="text-lg text-gray-600 animate-pulse">Loading workout plans...</span>
-        </div>
-      ) : error ? (
-        <div className="flex justify-center items-center h-40">
-          <span className="text-lg text-red-500">{error}</span>
-        </div>
-      ) : null}
+    <div className="min-h-screen bg-gradient-to-br from-white to-green-50 p-6 max-w-6xl mx-auto">
+      <h1 className="text-4xl font-extrabold text-center text-green-800 mb-10">
+        Your Workout Plans
+      </h1>
 
-      {/* Always show main list if not loading/error */}
-      {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {workoutPlans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`rounded-xl shadow-lg bg-white p-6 flex flex-col border-2 transition hover:scale-105 duration-150 ${selectedPlanIds.includes(plan.id) ? 'border-green-500' : 'border-transparent'}`}
-            >
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-blue-700 mb-1">{plan.name}</h3>
-                <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded mb-2">{plan.category}</span>
-                <p className="mb-3 text-gray-700 min-h-[48px]">{plan.description}</p>
-                <div>
-                  <h4 className="font-semibold mb-1 text-sm text-gray-800">Exercises:</h4>
-                  <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
-                    {plan.exercises && plan.exercises.map((exercise, idx) => (
-                      <li key={idx}>{typeof exercise === "string" ? exercise : JSON.stringify(exercise)}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <label className="flex items-center mt-6">
-                <input
-                  type="checkbox"
-                  checked={selectedPlanIds.includes(plan.id)}
-                  onChange={() => handleSelectPlan(plan.id)}
-                  disabled={saving}
-                  className="mr-2"
-                />
-                <span className="font-semibold">{selectedPlanIds.includes(plan.id) ? "Selected" : "Select this plan"}</span>
-              </label>
-            </div>
-          ))}
-          <button
-            onClick={handleSavePlans}
-            disabled={saving || selectedPlanIds.length === 0}
-            className="mt-6 py-2 px-4 rounded-lg w-full font-semibold transition bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {saving ? "Saving..." : "Save Selected Plans"}
-          </button>
+      {error && (
+        <div className="mb-6 text-center text-red-600 font-semibold">
+          {error}
         </div>
       )}
 
-      {/* Only show selected plan section if userPlan exists */}
-      {userPlans && userPlans.length > 0 && (
-        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-lg p-8 border-l-4 border-green-500">
-          <h3 className="text-2xl font-bold text-green-700 mb-2 text-center">Your Selected Workout Plans</h3>
-          {userPlans.map((plan) => (
-            <div key={plan.id} className="mb-4 border-b pb-4">
-              <div className="mb-2 text-center">
-                <span className="text-lg font-semibold">{plan.name}</span>
-                <span className="ml-2 bg-green-100 text-green-700 text-xs px-2 py-1 rounded">{plan.category}</span>
-              </div>
-              <p className="mb-3 text-gray-700 text-center">{plan.description}</p>
-              <div>
-                <h4 className="font-semibold mb-1 text-sm text-gray-800">Exercises:</h4>
-                <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
-                  {plan.exercises && plan.exercises.map((exercise, idx) => (
-                    <li key={idx}>{typeof exercise === "string" ? exercise : JSON.stringify(exercise)}</li>
-                  ))}
-                </ul>
-              </div>
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <span className="text-gray-500 text-lg animate-pulse">
+            Loading workout plans...
+          </span>
+        </div>
+      ) : (
+        <>
+          {/* All Plans Grid */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-semibold text-green-700 mb-6">
+              Available Plans
+            </h2>
+            <div className="grid gap-8 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {workoutPlans.length === 0 && (
+                <p className="text-center col-span-full text-gray-600">
+                  No workout plans found.
+                </p>
+              )}
+              {workoutPlans.map((plan) => (
+                <div
+                  key={plan.id}
+                  className={`bg-white rounded-xl shadow-md p-6 flex flex-col justify-between border-4 transition-transform duration-200
+                    ${
+                      selectedPlanIds.includes(plan.id)
+                        ? "border-green-500 scale-105"
+                        : "border-transparent hover:shadow-lg"
+                    }`}
+                >
+                  <div>
+                    <h3 className="text-xl font-bold text-green-900 mb-2">
+                      {plan.name}
+                    </h3>
+                    <p className="text-green-700 font-medium mb-1 capitalize">
+                      {plan.category}
+                    </p>
+                    <p className="text-gray-700 mb-4 min-h-[70px]">
+                      {plan.description}
+                    </p>
+
+                    <h4 className="font-semibold text-green-800 mb-2">
+                      Exercises:
+                    </h4>
+                    <ul className="list-disc list-inside text-gray-600 text-sm space-y-1 max-h-28 overflow-y-auto">
+                      {plan.exercises && plan.exercises.length > 0 ? (
+                        plan.exercises.map((ex) => (
+                          <li
+                            key={
+                              typeof ex === "string" ? ex : JSON.stringify(ex)
+                            }
+                          >
+                            {typeof ex === "string" ? ex : JSON.stringify(ex)}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="italic text-gray-400">
+                          No exercises listed
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+
+                  <label className="mt-5 flex items-center space-x-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={selectedPlanIds.includes(plan.id)}
+                      onChange={() => handleSelectPlan(plan.id)}
+                      disabled={saving}
+                      className="w-5 h-5 rounded border-green-500 accent-green-600"
+                    />
+                    <span className="font-semibold text-green-800">
+                      {selectedPlanIds.includes(plan.id)
+                        ? "Selected"
+                        : "Select Plan"}
+                    </span>
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 text-center">
               <button
-                onClick={() => handleRemoveSinglePlan(plan.id)}
-                className="mt-3 py-1 px-3 rounded bg-red-400 text-white hover:bg-red-600 text-sm font-semibold"
-                disabled={saving}
+                onClick={handleSavePlans}
+                disabled={saving || selectedPlanIds.length === 0}
+                className={`inline-block rounded-md py-3 px-10 font-semibold text-white transition-colors duration-200 ${
+                  saving || selectedPlanIds.length === 0
+                    ? "bg-green-300 cursor-not-allowed"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
               >
-                Remove
+                {saving ? "Saving..." : "Save Selected Plans"}
               </button>
             </div>
-          ))}
-          <button
-            onClick={handleDeleteUserPlan}
-            className="mt-6 py-2 px-4 rounded-lg w-full font-semibold transition bg-red-500 text-white hover:bg-red-600"
-            disabled={saving}
-          >
-            {saving ? "Deleting..." : "Remove All Workout Plans"}
-          </button>
-        </div>
+          </section>
+
+          {/* Selected Plans Section */}
+          {userPlans.length > 0 && (
+            <section className="bg-white rounded-xl shadow-lg p-8 border-l-8 border-green-500">
+              <h2 className="text-3xl font-extrabold text-green-800 mb-6 text-center">
+                Your Selected Workout Plans
+              </h2>
+              <div className="space-y-8">
+                {userPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="border-b border-green-200 pb-5 last:border-none"
+                  >
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <h3 className="text-2xl font-bold text-green-900">
+                          {plan.name}
+                        </h3>
+                        <span className="inline-block mt-1 bg-green-100 text-green-700 text-xs px-3 py-1 rounded-full capitalize">
+                          {plan.category}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveSinglePlan(plan.id)}
+                        disabled={saving}
+                        className="text-red-600 hover:text-red-800 font-semibold focus:outline-none"
+                        aria-label={`Remove ${plan.name}`}
+                        title="Remove plan"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <p className="text-gray-700 mb-4">{plan.description}</p>
+
+                    <h4 className="font-semibold text-green-800 mb-2">
+                      Exercises:
+                    </h4>
+                    <ul className="list-disc list-inside text-gray-600 text-sm max-h-28 overflow-y-auto space-y-1">
+                      {plan.exercises && plan.exercises.length > 0 ? (
+                        plan.exercises.map((ex) => (
+                          <li
+                            key={
+                              typeof ex === "string" ? ex : JSON.stringify(ex)
+                            }
+                          >
+                            {typeof ex === "string" ? ex : JSON.stringify(ex)}
+                          </li>
+                        ))
+                      ) : (
+                        <li className="italic text-gray-400">
+                          No exercises listed
+                        </li>
+                      )}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-10 text-center">
+                <button
+                  onClick={handleDeleteUserPlan}
+                  disabled={saving}
+                  className={`inline-block rounded-md py-3 px-12 font-semibold text-white transition-colors duration-200 ${
+                    saving
+                      ? "bg-red-300 cursor-not-allowed"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {saving ? "Removing..." : "Remove All Plans"}
+                </button>
+              </div>
+            </section>
+          )}
+        </>
       )}
     </div>
   );

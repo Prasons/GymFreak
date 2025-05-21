@@ -1,5 +1,52 @@
 import React, { useEffect, useState } from "react";
-import { getAllReferrals, markRewardGiven } from "../api/referralApi";
+import { toast } from "react-toastify";
+
+// Mock data for referrals
+let mockReferrals = [
+  {
+    id: 1,
+    referrer: { name: "John Doe", email: "john@example.com" },
+    referred: { name: "Alice Smith", email: "alice@example.com" },
+    status: "completed",
+    reward_given: false,
+    created_at: "2023-05-15T10:30:00Z"
+  },
+  {
+    id: 2,
+    referrer: { name: "Jane Doe", email: "jane@example.com" },
+    referred: { name: "Bob Johnson", email: "bob@example.com" },
+    status: "pending",
+    reward_given: false,
+    created_at: "2023-05-16T14:45:00Z"
+  },
+  {
+    id: 3,
+    referrer: { name: "Mike Wilson", email: "mike@example.com" },
+    referred: { name: "Sarah Williams", email: "sarah@example.com" },
+    status: "completed",
+    reward_given: true,
+    created_at: "2023-05-17T09:15:00Z"
+  }
+];
+
+// Mock API functions
+const getAllReferrals = async () => {
+  return new Promise(resolve => {
+    setTimeout(() => resolve([...mockReferrals]), 500);
+  });
+};
+
+const markRewardGiven = async (id) => {
+  return new Promise((resolve) => {
+    const referral = mockReferrals.find(r => r.id === id);
+    if (referral) {
+      referral.reward_given = true;
+      setTimeout(() => resolve({ success: true }), 300);
+    } else {
+      throw new Error('Referral not found');
+    }
+  });
+};
 
 const AdminReferralDashboard = () => {
   const [referrals, setReferrals] = useState([]);
@@ -15,17 +62,25 @@ const AdminReferralDashboard = () => {
     try {
       const data = await getAllReferrals();
       setReferrals(data);
-    } catch {
-      // handle error
+    } catch (error) {
+      console.error("Error fetching referrals:", error);
+      toast.error("Failed to load referrals");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const handleMarkGiven = async (id) => {
-    await markRewardGiven(id);
-    setSuccess("Reward marked as given.");
-    fetchReferrals();
-    setTimeout(() => setSuccess(""), 1200);
+    try {
+      await markRewardGiven(id);
+      setSuccess("Reward marked as given.");
+      fetchReferrals();
+      toast.success("Reward marked as given");
+      setTimeout(() => setSuccess(""), 1200);
+    } catch (error) {
+      console.error("Error marking reward:", error);
+      toast.error("Failed to mark reward");
+    }
   };
 
   return (

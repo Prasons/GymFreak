@@ -1,8 +1,5 @@
-import React, { useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import axiosInstance from "../api/axiosInstance";
-import { toast } from 'react-toastify';
-import { isTokenExpired } from "../utils/auth";
+import React from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   FaUsers,
   FaDumbbell,
@@ -15,128 +12,139 @@ import {
   FaSignOutAlt,
 } from "react-icons/fa";
 
+const stats = [
+  {
+    icon: <FaUsers />,
+    label: "Total Members",
+    value: 120,
+    color: "bg-gradient-to-r from-purple-500 to-pink-500",
+  },
+  {
+    icon: <FaDumbbell />,
+    label: "Trainers",
+    value: 8,
+    color: "bg-gradient-to-r from-green-400 to-blue-500",
+  },
+  {
+    icon: <FaMoneyBillWave />,
+    label: "Monthly Revenue",
+    value: "$4,500",
+    color: "bg-gradient-to-r from-yellow-400 to-orange-500",
+  },
+  {
+    icon: <FaGift />,
+    label: "Referrals",
+    value: 25,
+    color: "bg-gradient-to-r from-pink-400 to-red-500",
+  },
+];
+
+const navigationLinks = [
+  { path: "/admin/members", label: "Members", icon: <FaUsers /> },
+  { path: "/admin/trainers", label: "Trainers", icon: <FaUserTie /> },
+  { path: "/admin/products", label: "Products", icon: <FaShoppingCart /> },
+  { path: "/admin/diet-plan", label: "Diet Plans", icon: <FaClipboardList /> },
+  { path: "/admin/workout-plan", label: "Workout Plans", icon: <FaDumbbell /> },
+  {
+    path: "/admin/training-schedule",
+    label: "Schedules",
+    icon: <FaDumbbell />,
+  },
+  { path: "/admin/payment", label: "Payments", icon: <FaMoneyCheckAlt /> },
+  { path: "/admin/referral", label: "Referrals", icon: <FaGift /> },
+  {
+    path: "/admin/referral-dashboard",
+    label: "Referral Stats",
+    icon: <FaGift />,
+  },
+  { path: "/admin/classes", label: "Classes", icon: <FaDumbbell /> },
+];
+
+const StatCard = ({ icon, label, value, color }) => (
+  <div
+    className={`text-white p-6 rounded-2xl shadow-lg transform hover:scale-105 transition ${color}`}
+  >
+    <div className="text-4xl mb-3">{icon}</div>
+    <p className="text-sm uppercase tracking-wider text-white/80">{label}</p>
+    <p className="text-2xl font-bold">{value}</p>
+  </div>
+);
+
 const AdminDashboard = () => {
-  const navigate = useNavigate();
-  
-  // Check for token expiration on mount
-  useEffect(() => {
-    const adminToken = localStorage.getItem('adminToken');
-    if (isTokenExpired(adminToken)) {
-      // Redirect to login with session expired message
-      navigate('/admin/login?sessionExpired=true');
-    }
-    
-    // Set up a periodic check for token expiration (every 5 minutes)
-    const tokenCheckInterval = setInterval(() => {
-      if (isTokenExpired(localStorage.getItem('adminToken'))) {
-        clearInterval(tokenCheckInterval);
-        navigate('/admin/login?sessionExpired=true');
-      }
-    }, 5 * 60 * 1000); // 5 minutes
-    
-    return () => clearInterval(tokenCheckInterval);
-  }, [navigate]);
-  
+  const location = useLocation();
+
   const handleLogout = () => {
-    // Clear admin auth data
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('adminAuth');
-    localStorage.removeItem('adminInfo');
-    
-    // Clear axios default headers
-    delete axiosInstance.defaults.headers.common['Authorization'];
-    
-    // Navigate to login
-    navigate('/admin/login');
-    
-    // Notify the app that admin has logged out
-    window.dispatchEvent(new Event('adminLogout'));
+    localStorage.clear();
+    window.location.href = "/admin/login";
   };
 
-  const stats = [
-    { icon: <FaUsers />, label: "Total Members", value: 120 },
-    { icon: <FaDumbbell />, label: "Trainers", value: 8 },
-    { icon: <FaMoneyBillWave />, label: "Monthly Revenue", value: "$4,500" },
-    { icon: <FaGift />, label: "Referrals This Month", value: 25 },
-  ];
-
-  const navigationLinks = [
-    { path: "/admin/members", label: "Manage Members", icon: <FaUsers /> },
-    { path: "/admin/trainers", label: "Manage Trainers", icon: <FaUserTie /> },
-    {
-      path: "/admin/products",
-      label: "Manage Products",
-      icon: <FaShoppingCart />,
-    },
-    {
-      path: "/admin/diet-plan",
-      label: "Manage Diet Plans",
-      icon: <FaClipboardList />,
-    },
-    {
-      path: "/admin/workout-plan",
-      label: "Manage Workout Plans",
-      icon: <FaDumbbell />,
-    },
-    {
-      path: "/admin/training-schedule",
-      label: "Manage Training Schedules",
-      icon: <FaDumbbell />,
-    },
-    {
-      path: "/admin/payment",
-      label: "Manage Payments",
-      icon: <FaMoneyCheckAlt />,
-    },
-    { path: "/admin/referral", label: "Manage Referrals", icon: <FaGift /> },
-    { path: "/admin/referral-dashboard", label: "Referral Dashboard", icon: <FaGift /> },
-    { path: "/admin/classes", label: "Manage Classes", icon: <FaDumbbell /> },
-  ];
-
   return (
-    <div className="min-h-screen bg-primary text-light p-8">
-      {/* Header with Logout Button */}
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-light">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white/5 backdrop-blur-lg border-r border-gray-700 p-6 flex flex-col justify-between shadow-xl">
+        <div>
+          <h2 className="text-3xl font-extrabold text-accent mb-12 tracking-tight">
+            Gym Admin
+          </h2>
+          <nav className="space-y-3">
+            {navigationLinks.map((nav, idx) => (
+              <Link
+                key={idx}
+                to={nav.path}
+                className={`flex items-center gap-3 px-4 py-2 rounded-xl transition duration-200
+                  ${
+                    location.pathname === nav.path
+                      ? "bg-accent text-primary font-bold shadow"
+                      : "hover:bg-accent hover:text-primary text-gray-300"
+                  }`}
+              >
+                <span className="text-xl">{nav.icon}</span>
+                <span className="text-sm font-medium">{nav.label}</span>
+              </Link>
+            ))}
+          </nav>
+        </div>
+
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl transition shadow"
         >
           <FaSignOutAlt /> Logout
         </button>
-      </div>
+      </aside>
 
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-        {stats.map((stat, idx) => (
-          <div 
-            key={`stat-${idx}`}
-            className="bg-secondary p-6 rounded-lg flex flex-col items-center shadow-md"
-          >
-            <div className="text-4xl text-accent mb-2">{stat.icon}</div>
-            <p className="text-lg font-semibold">{stat.label}</p>
-            <p className="text-xl font-bold">{stat.value}</p>
-          </div>
-        ))}
-      </div>
+      {/* Main Content */}
+      <main className="flex-1 p-6 md:p-10 overflow-auto text-white">
+        <h1 className="text-4xl font-extrabold mb-8 tracking-tight text-white">
+          Dashboard Overview
+        </h1>
 
-      {/* Quick Navigation Section */}
-      <h2 className="text-2xl font-semibold mb-6">Quick Navigation</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {navigationLinks.map((nav, idx) => (
-          <Link
-            to={nav.path}
-            key={`nav-${idx}`}
-            className="bg-secondary p-6 rounded-lg flex flex-col items-center shadow-md hover:bg-accent hover:text-primary transition-all duration-300"
-          >
-            <div className="text-4xl mb-2">{nav.icon}</div>
-            <p className="text-lg font-semibold">{nav.label}</p>
-          </Link>
-        ))}
-      </div>
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {stats.map((stat, idx) => (
+            <StatCard key={idx} {...stat} />
+          ))}
+        </div>
+
+        {/* Navigation Cards */}
+        <h2 className="text-2xl font-semibold mb-6 text-gray-200">
+          Quick Access
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {navigationLinks.map((nav, idx) => (
+            <Link
+              key={idx}
+              to={nav.path}
+              className="bg-white/10 backdrop-blur-md border border-white/10 hover:bg-accent hover:text-primary p-6 rounded-2xl shadow-xl flex flex-col items-center text-center transition-all duration-300"
+            >
+              <div className="text-4xl mb-2">{nav.icon}</div>
+              <p className="text-lg font-semibold">{nav.label}</p>
+            </Link>
+          ))}
+        </div>
+      </main>
     </div>
-  )
+  );
 };
 
 export default AdminDashboard;

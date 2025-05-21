@@ -2,13 +2,92 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import {
-  getTrainingSchedules,
-  createTrainingSchedule,
-  updateTrainingSchedule,
-  deleteTrainingSchedule,
-} from "../api/trainingScheduleApi";
-import { isAdmin, getCurrentUser } from "../utils/auth";
+
+// Mock data for training schedules
+let mockSchedules = [
+  {
+    id: 1,
+    title: "Morning Yoga",
+    description: "Gentle yoga session for all levels",
+    start_time: "2023-06-01T08:00:00Z",
+    end_time: "2023-06-01T09:00:00Z",
+    trainer_id: 1,
+    trainer_name: "Alex Johnson",
+    max_participants: 15,
+    current_participants: 8,
+    status: "scheduled",
+    created_at: "2023-05-20T10:00:00Z"
+  },
+  {
+    id: 2,
+    title: "HIIT Workout",
+    description: "High intensity interval training",
+    start_time: "2023-06-01T17:00:00Z",
+    end_time: "2023-06-01T18:00:00Z",
+    trainer_id: 2,
+    trainer_name: "Sarah Williams",
+    max_participants: 20,
+    current_participants: 15,
+    status: "scheduled",
+    created_at: "2023-05-21T09:30:00Z"
+  }
+];
+
+// Mock API functions
+const getTrainingSchedules = async () => {
+  return new Promise(resolve => {
+    setTimeout(() => resolve([...mockSchedules]), 500);
+  });
+};
+
+const createTrainingSchedule = async (schedule) => {
+  return new Promise(resolve => {
+    const newSchedule = {
+      ...schedule,
+      id: Math.max(0, ...mockSchedules.map(s => s.id)) + 1,
+      created_at: new Date().toISOString(),
+      current_participants: 0,
+      status: "scheduled"
+    };
+    mockSchedules.push(newSchedule);
+    setTimeout(() => resolve(newSchedule), 300);
+  });
+};
+
+const updateTrainingSchedule = async (id, updates) => {
+  return new Promise((resolve, reject) => {
+    const index = mockSchedules.findIndex(s => s.id === id);
+    if (index !== -1) {
+      mockSchedules[index] = { ...mockSchedules[index], ...updates };
+      setTimeout(() => resolve(mockSchedules[index]), 300);
+    } else {
+      reject(new Error('Schedule not found'));
+    }
+  });
+};
+
+const deleteTrainingSchedule = async (id) => {
+  return new Promise((resolve) => {
+    const initialLength = mockSchedules.length;
+    mockSchedules = mockSchedules.filter(s => s.id !== id);
+    if (mockSchedules.length < initialLength) {
+      setTimeout(() => resolve({ success: true }), 300);
+    } else {
+      throw new Error('Schedule not found');
+    }
+  });
+};
+
+// Mock auth functions
+const isAdmin = () => {
+  const user = JSON.parse(localStorage.getItem('adminInfo') || 'null');
+  return !!user && user.role === 'admin';
+};
+
+const getCurrentUser = () => {
+  const user = JSON.parse(localStorage.getItem('adminInfo') || 'null');
+  return user || null;
+};
 
 const emptyForm = {
   title: "",
@@ -46,7 +125,7 @@ const AdminTrainingSchedule = () => {
         const user = getCurrentUser();
         if (!user) {
           toast.error("You must be logged in to access this page");
-          navigate("/login");
+          navigate("/admin/login");
           return;
         }
 
