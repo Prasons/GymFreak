@@ -1,139 +1,112 @@
-// Dummy data for admins
-let admins = [
-  {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@example.com',
-    role: 'super_admin',
-    status: 'active',
-    lastLogin: new Date().toISOString(),
-    createdAt: '2023-01-01T00:00:00.000Z'
-  },
-  {
-    id: '2',
-    name: 'Manager User',
-    email: 'manager@example.com',
-    role: 'manager',
-    status: 'active',
-    lastLogin: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: '2023-02-15T00:00:00.000Z'
-  },
-  {
-    id: '3',
-    name: 'Support User',
-    email: 'support@example.com',
-    role: 'support',
-    status: 'inactive',
-    lastLogin: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: '2023-03-10T00:00:00.000Z'
-  }
-];
+import axios from 'axios';
+import { getAdminToken } from '../utils/auth';
 
-// Current logged in admin ID (simulated)
-let currentAdminId = '1';
-
-// Simulate API delay
-const simulateApiCall = (data) => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve({ data }), 500);
-  });
-};
+const BASE_URL = 'http://localhost:8080/api/admin';
 
 // Admin authentication
 export const adminLogin = async (email, password) => {
-  // In a real app, this would validate credentials
-  const admin = admins.find(a => a.email === email && a.status === 'active');
-  if (!admin) {
-    throw new Error('Invalid admin credentials or account not active');
+  try {
+    const response = await axios.post(`${BASE_URL}/login`, { email, password });
+    return response.data;
+  } catch (error) {
+    console.error('Admin login error:', error);
+    throw error;
   }
-  currentAdminId = admin.id;
-  return simulateApiCall({
-    admin: { ...admin, password: undefined },
-    token: `dummy-admin-token-${admin.id}`
-  });
 };
 
 // Admin profile
 export const getAdminProfile = async () => {
-  const admin = admins.find(a => a.id === currentAdminId);
-  if (!admin) throw new Error('Admin not found');
-  return simulateApiCall({ ...admin, password: undefined });
+  try {
+    const token = getAdminToken();
+    const response = await axios.get(`${BASE_URL}/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching admin profile:', error);
+    throw error;
+  }
 };
 
 export const updateAdminProfile = async (profileData) => {
-  const index = admins.findIndex(a => a.id === currentAdminId);
-  if (index === -1) throw new Error('Admin not found');
-  
-  admins[index] = { ...admins[index], ...profileData };
-  return simulateApiCall({ ...admins[index], password: undefined });
+  try {
+    const token = getAdminToken();
+    const response = await axios.put(`${BASE_URL}/me`, profileData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating admin profile:', error);
+    throw error;
+  }
 };
 
 export const changeAdminPassword = async (currentPassword, newPassword) => {
-  const index = admins.findIndex(a => a.id === currentAdminId);
-  if (index === -1) throw new Error('Admin not found');
-  
-  // In a real app, we would verify currentPassword first
-  return simulateApiCall({
-    success: true,
-    message: 'Password updated successfully'
-  });
+  try {
+    const token = getAdminToken();
+    const response = await axios.put(
+      `${BASE_URL}/me/change-password`,
+      { currentPassword, newPassword },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error changing admin password:', error);
+    throw error;
+  }
 };
 
 // Admin management
 export const getAdmins = async () => {
-  return simulateApiCall(admins.map(admin => ({
-    ...admin,
-    password: undefined
-  })));
+  try {
+    const token = getAdminToken();
+    const response = await axios.get(BASE_URL, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching admins:', error);
+    throw error;
+  }
 };
 
 export const registerAdmin = async (adminData) => {
-  const newAdmin = {
-    ...adminData,
-    id: (admins.length + 1).toString(),
-    status: 'active',
-    lastLogin: new Date().toISOString(),
-    createdAt: new Date().toISOString(),
-    role: adminData.role || 'support' // Default to lowest privilege
-  };
-  admins.push(newAdmin);
-  return simulateApiCall({
-    ...newAdmin,
-    password: undefined,
-    message: 'Admin registered successfully'
-  });
+  try {
+    const token = getAdminToken();
+    const response = await axios.post(BASE_URL, adminData, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error registering admin:', error);
+    throw error;
+  }
 };
 
 export const updateAdminStatus = async (id, status) => {
-  const index = admins.findIndex(a => a.id === id);
-  if (index === -1) throw new Error('Admin not found');
-  
-  // Prevent deactivating self
-  if (id === currentAdminId) {
-    throw new Error('Cannot deactivate your own account');
+  try {
+    const token = getAdminToken();
+    const response = await axios.put(
+      `${BASE_URL}/${id}/status`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error updating admin status:', error);
+    throw error;
   }
-  
-  admins[index].status = status;
-  return simulateApiCall({
-    ...admins[index],
-    password: undefined,
-    message: `Admin status updated to ${status}`
-  });
 };
 
 export const deleteAdmin = async (id) => {
-  const index = admins.findIndex(a => a.id === id);
-  if (index === -1) throw new Error('Admin not found');
-  
-  // Prevent deleting self
-  if (id === currentAdminId) {
-    throw new Error('Cannot delete your own account');
+  try {
+    const token = getAdminToken();
+    const response = await axios.delete(`${BASE_URL}/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting admin:', error);
+    throw error;
   }
-  
-  const [deletedAdmin] = admins.splice(index, 1);
-  return simulateApiCall({
-    success: true,
-    message: 'Admin deleted successfully',
-    adminId: id
-  });
 };

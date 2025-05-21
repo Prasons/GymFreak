@@ -33,6 +33,7 @@ const DietPlanPage = () => {
   }, []);
 
   useEffect(() => {
+    
     const fetchUserPlans = async () => {
       try {
         const plans = await getUserDietPlan();

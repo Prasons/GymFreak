@@ -163,7 +163,7 @@ const AdminTrainingSchedule = () => {
         status: statusFilter !== "all" ? statusFilter : undefined,
       };
 
-      const { data, total } = await getTrainingSchedules(params);
+      const data = await getTrainingSchedules(params);
 
       const formattedData = data.map((schedule) => ({
         ...schedule,
@@ -176,7 +176,7 @@ const AdminTrainingSchedule = () => {
       }));
 
       setSchedules(formattedData);
-      setTotalItems(total || data.length);
+      setTotalItems(data?.length);
     } catch (err) {
       console.error("Error fetching schedules:", err);
       const errorMsg =

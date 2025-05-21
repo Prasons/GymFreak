@@ -14,6 +14,8 @@ const WorkoutPlanPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+
+
   useEffect(() => {
     const fetchPlans = async () => {
       setLoading(true);
@@ -31,9 +33,10 @@ const WorkoutPlanPage = () => {
   }, []);
 
   useEffect(() => {
+    const userInfo = JSON.parse(localStorage.userInfo)
     const fetchUserPlans = async () => {
       try {
-        const plans = await getUserWorkoutPlan();
+        const plans = await getUserWorkoutPlan(userInfo.id);
         if (Array.isArray(plans)) {
           setUserPlans(plans);
           setSelectedPlanIds(plans.map((p) => p.id));
@@ -62,7 +65,8 @@ const WorkoutPlanPage = () => {
   const handleSavePlans = async () => {
     setSaving(true);
     try {
-      await setUserWorkoutPlan(selectedPlanIds);
+      const userInfo = JSON.parse(localStorage.userInfo)
+      await setUserWorkoutPlan(userInfo.id,selectedPlanIds);
       setUserPlans(workoutPlans.filter((p) => selectedPlanIds.includes(p.id)));
       setError("");
     } catch {
@@ -92,7 +96,8 @@ const WorkoutPlanPage = () => {
     if (!window.confirm("Remove this workout plan?")) return;
     setSaving(true);
     try {
-      await removeUserWorkoutPlan(planId);
+      const userInfo = JSON.parse(localStorage.userInfo)
+      await removeUserWorkoutPlan(userInfo.id,planId);
       setUserPlans((prev) => prev.filter((p) => p.id !== planId));
       setSelectedPlanIds((prev) => prev.filter((id) => id !== planId));
       setError("");
@@ -155,11 +160,11 @@ const WorkoutPlanPage = () => {
                     </p>
 
                     <h4 className="font-semibold text-green-800 mb-2">
-                      Exercises:
+                      Target Goals:
                     </h4>
                     <ul className="list-disc list-inside text-gray-600 text-sm space-y-1 max-h-28 overflow-y-auto">
-                      {plan.exercises && plan.exercises.length > 0 ? (
-                        plan.exercises.map((ex) => (
+                      {plan.target_goals && plan.target_goals.length > 0 ? (
+                        plan.target_goals.map((ex) => (
                           <li
                             key={
                               typeof ex === "string" ? ex : JSON.stringify(ex)
@@ -170,7 +175,7 @@ const WorkoutPlanPage = () => {
                         ))
                       ) : (
                         <li className="italic text-gray-400">
-                          No exercises listed
+                          No target_goals listed
                         </li>
                       )}
                     </ul>
@@ -243,11 +248,11 @@ const WorkoutPlanPage = () => {
                     <p className="text-gray-700 mb-4">{plan.description}</p>
 
                     <h4 className="font-semibold text-green-800 mb-2">
-                      Exercises:
+                      Target Goals:
                     </h4>
                     <ul className="list-disc list-inside text-gray-600 text-sm max-h-28 overflow-y-auto space-y-1">
-                      {plan.exercises && plan.exercises.length > 0 ? (
-                        plan.exercises.map((ex) => (
+                      {plan.target_goals && plan.target_goals.length > 0 ? (
+                        plan.target_goals.map((ex) => (
                           <li
                             key={
                               typeof ex === "string" ? ex : JSON.stringify(ex)
@@ -258,7 +263,7 @@ const WorkoutPlanPage = () => {
                         ))
                       ) : (
                         <li className="italic text-gray-400">
-                          No exercises listed
+                          No Target Goals listed
                         </li>
                       )}
                     </ul>

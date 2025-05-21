@@ -33,6 +33,9 @@ export default function Login({ onLogin }) {
           refreshToken,
           isAdmin: user?.isAdmin || false
         });
+
+      localStorage.setItem('userInfo', JSON.stringify(user));
+
         
         onLogin(); // Call the parent's login function
         navigate("/dashboard"); // Redirect after login

@@ -3,7 +3,6 @@ const login = async (email, password) => {
   try {
     // Replace with your actual authentication API call
     const response = await authenticateUser(email, password);
-
     if (response.success) {
       // Store user data and token
       localStorage.setItem("authToken", response.token);

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-
+import { getAllUsers, deleteUser, updateUser, changeUserStatus } from "../api/userApi";
 // Mock data for development
 const mockMembers = [
   { id: 1, name: "John Doe", email: "john@example.com", status: "Active" },
@@ -12,28 +12,10 @@ const mockMembers = [
 
 // Mock API functions
 const mockApi = {
-  getMembers: () => new Promise((resolve) => setTimeout(() => resolve([...mockMembers]), 500)),
-  updateStatus: (id, status) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers[memberIndex].status = status;
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  updateMember: (id, data) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers[memberIndex] = { ...mockMembers[memberIndex], ...data };
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  deleteMember: (id) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers.splice(memberIndex, 1);
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  })
+  getMembers: () => getAllUsers(),
+  updateStatus: (id, status) => changeUserStatus(id, status),
+  updateMember: (id, data) => updateUser(id, data),
+  deleteMember: (id) => deleteUser(id)
 };
 
 const AdminMembers = () => {

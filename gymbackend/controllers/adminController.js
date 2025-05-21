@@ -326,7 +326,7 @@ export const refreshAdminToken = (req, res) => {
   const accessToken = jwt.sign(
     { adminId, isAdmin: true },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '1500m' }
   );
 
   // Generate new refresh token
@@ -362,18 +362,18 @@ const generateAdminTokens = async (adminId) => {
 
   const accessToken = jwt.sign(
     { 
-      id: adminId,
+      adminId,
       isAdmin: true,
       role: admin.role || 'admin',
       email: admin.email
     },
     process.env.JWT_SECRET,
-    { expiresIn: '15m' }
+    { expiresIn: '1500m' }
   );
 
   const refreshToken = jwt.sign(
     { 
-      id: adminId,
+      adminId,
       isAdmin: true
     },
     process.env.REFRESH_TOKEN_SECRET,

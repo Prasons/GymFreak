@@ -97,19 +97,7 @@ function App() {
     };
   }, []);
   
-  // Auto-login for development
-  useEffect(() => {
-    // Auto-login for development
-    if (process.env.NODE_ENV === 'development' && !localStorage.getItem('authToken')) {
-      localStorage.setItem('authToken', 'dummy-user-token');
-      localStorage.setItem('userInfo', JSON.stringify({ email: 'dev@example.com', name: 'Developer' }));
-      setIsAuthenticated(true);
-    }
-    localStorage.setItem('adminAuth', 'true');
-    localStorage.setItem('adminToken', 'dummy-admin-token');
-    setIsAdminAuthenticated(true);
-  }, []);
-
+ 
   const handleLogin = () => {
     localStorage.setItem("authToken", "dummy-token");
     setIsAuthenticated(true);
@@ -194,7 +182,7 @@ function App() {
         />
         <Route path="/payment" element={<Payment />} />
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/admin/login" element={<AdminLogin />}  />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/members" element={<AdminMembers />} />
         <Route path="/admin/diet-plan" element={<AdminDietPlan />} />

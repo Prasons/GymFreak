@@ -1,71 +1,24 @@
 import React, { useEffect, useState } from "react";
-import { toast } from "react-toastify";
-
-// Mock data for workout plans
-let mockWorkoutPlans = [
-  {
-    id: 1,
-    name: "Beginner Full Body",
-    description: "A full body workout plan for beginners",
-    difficulty_level: "beginner",
-    duration_weeks: 4,
-    target_goals: ["General Fitness", "Weight Loss"],
-    is_public: true
-  },
-  {
-    id: 2,
-    name: "Advanced Strength",
-    description: "Advanced strength training program",
-    difficulty_level: "advanced",
-    duration_weeks: 8,
-    target_goals: ["Strength", "Muscle Gain"],
-    is_public: true
-  }
-];
-
-// Mock API functions
-const getWorkoutPlans = async () => {
-  return new Promise(resolve => {
-    setTimeout(() => resolve([...mockWorkoutPlans]), 500);
-  });
-};
-
-const createWorkoutPlan = async (plan) => {
-  return new Promise(resolve => {
-    const newPlan = {
-      ...plan,
-      id: Math.max(0, ...mockWorkoutPlans.map(p => p.id)) + 1
-    };
-    mockWorkoutPlans.push(newPlan);
-    setTimeout(() => resolve(newPlan), 300);
-  });
-};
-
-const updateWorkoutPlan = async (id, updates) => {
-  return new Promise(resolve => {
-    const index = mockWorkoutPlans.findIndex(p => p.id === id);
-    if (index !== -1) {
-      mockWorkoutPlans[index] = { ...mockWorkoutPlans[index], ...updates };
-      setTimeout(() => resolve(mockWorkoutPlans[index]), 300);
-    } else {
-      throw new Error('Workout plan not found');
-    }
-  });
-};
-
-const deleteWorkoutPlan = async (id) => {
-  return new Promise(resolve => {
-    const initialLength = mockWorkoutPlans.length;
-    mockWorkoutPlans = mockWorkoutPlans.filter(p => p.id !== id);
-    if (mockWorkoutPlans.length < initialLength) {
-      setTimeout(() => resolve({ success: true }), 300);
-    } else {
-      throw new Error('Workout plan not found');
-    }
-  });
-};
+import {
+  getWorkoutPlans,
+  createWorkoutPlan,
+  updateWorkoutPlan,
+  deleteWorkoutPlan,
+} from "../api/workoutPlanApi";
 
 const AdminWorkoutPlan = () => {
+  const workoutCategories = [
+    "Strength Training",
+    "Cardio",
+    "HIIT",
+    "Yoga & Flexibility",
+    "Bodyweight",
+    "Mobility & Recovery",
+    "Sports Specific",
+    "Full Body",
+    "Upper Body",
+    "Lower Body"
+  ];
   const [workoutPlans, setWorkoutPlans] = useState([]);
   const [editingPlan, setEditingPlan] = useState(null);
   const [form, setForm] = useState({ 
@@ -74,6 +27,7 @@ const AdminWorkoutPlan = () => {
     difficulty_level: "beginner", 
     duration_weeks: 4,
     target_goals: [],
+    category: "",
     is_public: true
   });
   const [loading, setLoading] = useState(true);
@@ -89,12 +43,9 @@ const AdminWorkoutPlan = () => {
       const plans = await getWorkoutPlans();
       setWorkoutPlans(plans);
     } catch (err) {
-      console.error("Error fetching workout plans:", err);
       setError("Failed to load workout plans");
-      toast.error("Failed to load workout plans");
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   const handleInputChange = (e) => {
@@ -104,16 +55,19 @@ const AdminWorkoutPlan = () => {
 
   const handleNumberChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: Number(value) }));
+    setForm((prev) => ({
+      ...prev,
+      [name]: parseInt(value, 10) || 0,
+    }));
   };
 
   const handleTargetGoalsChange = (e) => {
     const { value, checked } = e.target;
-    setForm(prev => ({
+    setForm((prev) => ({
       ...prev,
       target_goals: checked
         ? [...prev.target_goals, value]
-        : prev.target_goals.filter(goal => goal !== value)
+        : prev.target_goals.filter((goal) => goal !== value),
     }));
   };
 
@@ -255,6 +209,24 @@ const AdminWorkoutPlan = () => {
             ))}
           </div>
         </div>
+
+        <div className="mb-4">
+          <label className="block mb-1 font-semibold">Category</label>
+          <select
+            name="category"
+            value={form.category}
+            onChange={handleInputChange}
+            className="w-full border px-3 py-2 rounded"
+            required
+          >
+            
+            {workoutCategories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
         
         <button
           type="submit"
@@ -302,7 +274,7 @@ const AdminWorkoutPlan = () => {
               </div>
               <div className="text-gray-700 text-sm mt-1">{plan.description}</div>
               <div className="text-gray-600 text-xs mt-1">
-                Exercises: {Array.isArray(plan.exercises) ? plan.exercises.join(", ") : ""}
+                Target Goals: {Array.isArray(plan.target_goals) ? plan.target_goals.join(", ") : ""}
               </div>
             </li>
           ))}

@@ -78,6 +78,12 @@ export const loginUser = async (req, res) => {
       return res.status(400).json({ message: "Invalid email" });
     }
 
+    // Check user status
+    if (user.rows[0].status !== 'active') {
+      console.log('User account is not active:', user.status);
+      return res.status(403).json({ message: "Account is not active" });
+    }
+
     console.log('Input password:', password);
     console.log('Stored hash:', user.rows[0].password);
     
