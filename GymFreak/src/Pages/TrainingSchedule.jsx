@@ -6,6 +6,23 @@ import {
   unenrollUserTrainingSchedule,
   unenrollAllUserTrainingSchedules,
 } from "../api/trainingScheduleApi";
+import { FaCalendarAlt, FaClock, FaDumbbell, FaUserFriends, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
+import { toast } from 'react-toastify';
+import { motion } from 'framer-motion';
+
+const containerVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 }
+};
 
 const TrainingSchedulePage = () => {
   const [schedules, setSchedules] = useState([]);
@@ -104,103 +121,179 @@ const TrainingSchedulePage = () => {
   };
 
   return (
-    <div className="py-10 px-4 max-w-4xl mx-auto min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-      <h2 className="text-3xl font-bold mb-8 text-center text-primary">Training Schedules</h2>
-      {loading ? (
-        <div className="flex justify-center items-center h-40">
-          <span className="text-lg text-gray-600 animate-pulse">Loading schedules...</span>
-        </div>
-      ) : error ? (
-        <div className="flex justify-center items-center h-40">
-          <span className="text-lg text-red-500">{error}</span>
-        </div>
-      ) : null}
+    <motion.div 
+      className="min-h-screen bg-black text-white py-12 px-4 sm:px-6 lg:px-8"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div className="text-center mb-12" variants={itemVariants}>
+          <h1 className="text-4xl font-bold mb-4 flex items-center justify-center">
+            <FaCalendarAlt className="mr-4 text-purple-500" />
+            Training Schedules
+            <FaDumbbell className="ml-4 text-purple-500" />
+          </h1>
+          <p className="text-gray-400 text-lg">Schedule your training sessions with expert trainers</p>
+          {error && (
+            <div className="mt-4 text-red-500 bg-red-900/20 p-4 rounded-lg">{error}</div>
+          )}
+        </motion.div>
 
-      {/* List of all schedules */}
-      {!loading && !error && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {schedules.map((schedule) => (
-            <div
-              key={schedule.id}
-              className={`rounded-xl shadow-lg bg-white p-6 flex flex-col border-2 transition hover:scale-105 duration-150 ${selectedIds.includes(schedule.id) ? 'border-green-500' : 'border-transparent'}`}
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500"></div>
+          </div>
+        ) : schedules.length === 0 ? (
+          <div className="text-center text-gray-400">No training schedules available.</div>
+        ) : (
+          <motion.div variants={containerVariants}>
+            {/* Available Schedules */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {schedules.map((schedule) => (
+                <motion.div
+                  key={schedule.id}
+                  variants={itemVariants}
+                  className={`relative bg-zinc-900 rounded-2xl p-8 shadow-xl transform hover:scale-105 transition-transform duration-300 ${selectedIds.includes(schedule.id) ? 'border-2 border-purple-500' : ''}`}
+                >
+                  <div className="text-center mb-8">
+                    <FaUserFriends className="text-4xl text-purple-500 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold mb-2">{schedule.name}</h2>
+                    <span className="inline-block bg-purple-500/20 text-purple-400 text-sm px-3 py-1 rounded-full">
+                      {schedule.trainer}
+                    </span>
+                  </div>
+
+                  <div className="mb-8">
+                    <p className="text-gray-400 mb-4">{schedule.description}</p>
+                    <div className="space-y-4">
+                      <div className="flex items-center text-gray-300">
+                        <FaCalendarAlt className="text-purple-500 mr-2" />
+                        <span>{schedule.days && schedule.days.join(', ')}</span>
+                      </div>
+                      <div className="flex items-center text-gray-300">
+                        <FaClock className="text-purple-500 mr-2" />
+                        <span>{schedule.time}</span>
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-2 text-purple-500">Activities:</h3>
+                        <ul className="space-y-2">
+                          {schedule.activities && schedule.activities.map((activity, idx) => (
+                            <li key={idx} className="flex items-center text-gray-300">
+                              <FaDumbbell className="text-purple-500 mr-2" />
+                              <span>{typeof activity === "string" ? activity : JSON.stringify(activity)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleSelect(schedule.id)}
+                    className={`w-full py-3 px-6 rounded-xl ${selectedIds.includes(schedule.id) ? 'bg-purple-500 hover:bg-purple-600' : 'bg-zinc-800 hover:bg-zinc-700'} text-white font-semibold transition-colors duration-200 flex items-center justify-center`}
+                  >
+                    {selectedIds.includes(schedule.id) ? (
+                      <>
+                        <FaCheck className="mr-2" /> Selected
+                      </>
+                    ) : (
+                      'Select Schedule'
+                    )}
+                  </button>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <motion.div 
+              className="mt-12 flex flex-wrap gap-4 justify-center"
+              variants={itemVariants}
             >
-              <div className="flex-1">
-                <h3 className="text-xl font-bold text-blue-700 mb-1">{schedule.name}</h3>
-                <span className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded mb-2">{schedule.trainer}</span>
-                <p className="mb-3 text-gray-700 min-h-[48px]">{schedule.description}</p>
-                <div>
-                  <h4 className="font-semibold mb-1 text-sm text-gray-800">Days/Time:</h4>
-                  <div className="text-gray-600 text-sm mb-2">{schedule.days && schedule.days.join(', ')} | {schedule.time}</div>
-                  <h4 className="font-semibold mb-1 text-sm text-gray-800">Activities:</h4>
-                  <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
-                    {schedule.activities && schedule.activities.map((a, idx) => (
-                      <li key={idx}>{typeof a === "string" ? a : JSON.stringify(a)}</li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-              <label className="flex items-center mt-6">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.includes(schedule.id)}
-                  onChange={() => handleSelect(schedule.id)}
-                  disabled={saving}
-                  className="mr-2"
-                />
-                <span className="font-semibold">{selectedIds.includes(schedule.id) ? "Selected" : "Select this schedule"}</span>
-              </label>
-            </div>
-          ))}
-          <button
-            onClick={handleSave}
-            disabled={saving || selectedIds.length === 0}
-            className="mt-6 py-2 px-4 rounded-lg w-full font-semibold transition bg-blue-600 text-white hover:bg-blue-700"
-          >
-            {saving ? "Saving..." : "Save Selected Schedules"}
-          </button>
-        </div>
-      )}
-
-      {/* User's enrolled schedules */}
-      {userSchedules && userSchedules.length > 0 && (
-        <div className="max-w-xl mx-auto bg-white rounded-xl shadow-lg p-8 border-l-4 border-green-500">
-          <h3 className="text-2xl font-bold text-green-700 mb-2 text-center">Your Enrolled Training Schedules</h3>
-          {userSchedules.map((schedule) => (
-            <div key={schedule.id} className="mb-4 border-b pb-4">
-              <div className="mb-2 text-center">
-                <span className="text-lg font-semibold">{schedule.name}</span>
-                <span className="ml-2 bg-green-100 text-green-700 text-xs px-2 py-1 rounded">{schedule.trainer}</span>
-              </div>
-              <p className="mb-3 text-gray-700 text-center">{schedule.description}</p>
-              <div>
-                <h4 className="font-semibold mb-1 text-sm text-gray-800">Days/Time:</h4>
-                <div className="text-gray-600 text-sm mb-2">{schedule.days && schedule.days.join(', ')} | {schedule.time}</div>
-                <h4 className="font-semibold mb-1 text-sm text-gray-800">Activities:</h4>
-                <ul className="list-disc list-inside text-gray-600 text-sm space-y-1">
-                  {schedule.activities && schedule.activities.map((a, idx) => (
-                    <li key={idx}>{typeof a === "string" ? a : JSON.stringify(a)}</li>
-                  ))}
-                </ul>
-              </div>
               <button
-                onClick={() => handleUnenroll(schedule.id)}
-                className="mt-3 py-1 px-3 rounded bg-red-400 text-white hover:bg-red-600 text-sm font-semibold"
-                disabled={saving}
+                onClick={handleSave}
+                disabled={saving || selectedIds.length === 0}
+                className="px-8 py-3 bg-purple-500 hover:bg-purple-600 text-white rounded-xl font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
               >
-                Remove
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Selected Schedules'
+                )}
               </button>
-            </div>
-          ))}
-          <button
-            onClick={handleUnenrollAll}
-            className="mt-6 py-2 px-4 rounded-lg w-full font-semibold transition bg-red-500 text-white hover:bg-red-600"
-            disabled={saving}
-          >
-            {saving ? "Deleting..." : "Remove All Schedules"}
-          </button>
-        </div>
-      )}
-    </div>
+            </motion.div>
+
+            {/* Active Schedules */}
+            {userSchedules.length > 0 && (
+              <motion.div 
+                className="mt-16"
+                variants={containerVariants}
+              >
+                <h2 className="text-3xl font-bold mb-8 text-center">Your Active Schedules</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {userSchedules.map((schedule) => (
+                    <motion.div 
+                      key={schedule.id} 
+                      variants={itemVariants}
+                      className="bg-zinc-900/50 p-8 rounded-2xl border border-purple-500/30"
+                    >
+                      <div className="flex justify-between items-start mb-6">
+                        <h3 className="text-xl font-bold text-purple-500">{schedule.name}</h3>
+                        <button
+                          onClick={() => handleUnenroll(schedule.id)}
+                          disabled={saving}
+                          className="text-red-500 hover:text-red-400 transition-colors duration-200"
+                        >
+                          <FaTimes />
+                        </button>
+                      </div>
+                      <span className="inline-block bg-purple-500/20 text-purple-400 text-sm px-3 py-1 rounded-full mb-4">
+                        {schedule.trainer}
+                      </span>
+                      <div className="space-y-4 mb-6">
+                        <div className="flex items-center text-gray-300">
+                          <FaCalendarAlt className="text-purple-500 mr-2" />
+                          <span>{schedule.days && schedule.days.join(', ')}</span>
+                        </div>
+                        <div className="flex items-center text-gray-300">
+                          <FaClock className="text-purple-500 mr-2" />
+                          <span>{schedule.time}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-4 text-purple-500/80">Activities:</h4>
+                        <ul className="space-y-3">
+                          {schedule.activities && schedule.activities.map((activity, idx) => (
+                            <li key={idx} className="flex items-center text-gray-300">
+                              <FaDumbbell className="text-purple-500 mr-2" />
+                              <span>{typeof activity === "string" ? activity : JSON.stringify(activity)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex justify-center">
+                  <button
+                    onClick={handleUnenrollAll}
+                    disabled={saving}
+                    className="px-8 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <FaTrash className="mr-2" /> Remove All Schedules
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 

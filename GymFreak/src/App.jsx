@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { CartProvider } from "./context/CartContext";
 import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   BrowserRouter as Router,
   Routes,
@@ -20,6 +22,7 @@ import DietPlan from "./Pages/DietPlan";
 import WorkoutPlanPage from "./Pages/WorkoutPlan";
 import TrainingSchedulePage from "./Pages/TrainingSchedule";
 import ReferralDashboard from "./Pages/ReferralDashboard";
+import NutritionSearch from "./Pages/NutritionSearch";
 import ReferAFriend from "./Pages/ReferPage";
 import ShoppingCart from "./Pages/ShoppingCartPage";
 import GymEquipment from "./Pages/GymEquipmentPage";
@@ -38,16 +41,16 @@ import AdminProducts from "./admin/AdminProducts";
 import AdminTrainers from "./admin/AdminTrainers";
 import AdminPayment from "./admin/AdminPayment";
 import AdminClasses from "./admin/AdminClasses";
+import AdminMembershipPlans from "./admin/AdminMembershipPlans";
+import AdminInventory from "./admin/AdminInventory";
 
 // Components
 import PrivateRoute from "./Component/PrivateRoute";
 
-// Bypassing auth for development
 function ProtectedRoute({ children }) {
-  // Auto-login for development
-  if (!localStorage.getItem("adminAuth")) {
-    localStorage.setItem('adminAuth', 'true');
-    localStorage.setItem('adminToken', 'dummy-admin-token');
+  const isAuthenticated = localStorage.getItem('authToken') !== null;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
   }
   return children;
 }
@@ -55,7 +58,21 @@ function ProtectedRoute({ children }) {
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <CartProvider>
+        <App />
+        <ToastContainer
+          position="bottom-right"
+          autoClose={2000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
+      </CartProvider>
     </Router>
   );
 }
@@ -105,9 +122,6 @@ function App() {
       localStorage.setItem('userInfo', JSON.stringify({ email: 'dev@example.com', name: 'Developer' }));
       setIsAuthenticated(true);
     }
-    localStorage.setItem('adminAuth', 'true');
-    localStorage.setItem('adminToken', 'dummy-admin-token');
-    setIsAdminAuthenticated(true);
   }, []);
 
   const handleLogin = () => {
@@ -132,31 +146,18 @@ function App() {
 
   return (
     <>
-      {!isLandingPage && (
+      {!isLandingPage && !isAuthenticated && !isAdminAuthenticated && (
         <AppBar position="static">
           <Toolbar style={{ display: "flex", justifyContent: "space-between" }}>
-            {isAdminAuthenticated ? (
-              <Button color="inherit" onClick={handleLogout}>
-                Logout
-              </Button>
-            ) : isAuthenticated ? (
-              <Button color="inherit" onClick={handleLogout}>
-                Logout
-              </Button>
-            ) : null}
-            {!isAuthenticated && !isAdminAuthenticated && (
-              <>
-                <Button color="inherit" href="/login">
-                  Login
-                </Button>
-                <Button color="inherit" href="/admin/login">
-                  Admin Login
-                </Button>
-                <Button color="inherit" href="/signup">
-                  Sign Up
-                </Button>
-              </>
-            )}
+            <Button color="inherit" href="/login">
+              Login
+            </Button>
+            <Button color="inherit" href="/admin/login">
+              Admin Login
+            </Button>
+            <Button color="inherit" href="/signup">
+              Sign Up
+            </Button>
           </Toolbar>
         </AppBar>
       )}
@@ -182,28 +183,28 @@ function App() {
         <Route path="/workoutplan" element={<WorkoutPlanPage />} />
         <Route path="/trainingschedule" element={<TrainingSchedulePage />} />
         <Route path="/schedule" element={<Navigate to="/trainingschedule" replace />} />
-        <Route path="/referral" element={<ReferralDashboard />} />
-        <Route path="/referafriend" element={<ReferAFriend />} />
-        <Route
-          path="/shoppingcart"
-          element={<ShoppingCart cartItems={cartItems} />}
-        />
+        <Route path="/referral" element={<ProtectedRoute><ReferralDashboard /></ProtectedRoute>} />
+        <Route path="/refer" element={<ProtectedRoute><ReferAFriend /></ProtectedRoute>} />
+        <Route path="/shoppingcart" element={<ProtectedRoute><ShoppingCart /></ProtectedRoute>} />
+        <Route path="/nutrition" element={<ProtectedRoute><NutritionSearch /></ProtectedRoute>} />
         <Route
           path="/gymequipment"
           element={<GymEquipment onAddToCart={handleAddToCart} />}
         />
         <Route path="/payment" element={<Payment />} />
         {/* Admin Routes */}
-        <Route path="/admin/login" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/admin/login" element={<AdminLogin onLogin={() => setIsAdminAuthenticated(true)} />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/members" element={<AdminMembers />} />
         <Route path="/admin/diet-plan" element={<AdminDietPlan />} />
         <Route path="/admin/workout-plan" element={<AdminWorkoutPlan />} />
         <Route path="/admin/training-schedule" element={<AdminTrainingSchedule />} />
+        <Route path="/admin/inventory" element={<AdminInventory />} />
         <Route path="/admin/referral" element={<AdminReferral />} />
         <Route path="/admin/referral-dashboard" element={<AdminReferralDashboard />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/trainers" element={<AdminTrainers />} />
+        <Route path="/admin/membership-plans" element={<AdminMembershipPlans />} />
         <Route path="/admin/payment" element={<AdminPayment />} />
         <Route path="/admin/classes" element={<AdminClasses />} />
         <Route path="/" element={<Navigate to="/home" />} />{" "}

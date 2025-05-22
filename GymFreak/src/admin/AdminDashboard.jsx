@@ -1,148 +1,232 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  FaUsers,
-  FaDumbbell,
-  FaMoneyBillWave,
-  FaGift,
-  FaShoppingCart,
-  FaUserTie,
+  FaBars,
+  FaBell,
+  FaCalendarAlt,
   FaClipboardList,
+  FaCog,
+  FaDumbbell,
+  FaGift,
+  FaIdCard,
   FaMoneyCheckAlt,
   FaSignOutAlt,
+  FaStore,
+  FaTimes,
+  FaUser,
+  FaUserTie,
+  FaUsers,
+  FaBoxes
 } from "react-icons/fa";
 
-const stats = [
-  {
-    icon: <FaUsers />,
-    label: "Total Members",
-    value: 120,
-    color: "bg-gradient-to-r from-purple-500 to-pink-500",
-  },
-  {
-    icon: <FaDumbbell />,
-    label: "Trainers",
-    value: 8,
-    color: "bg-gradient-to-r from-green-400 to-blue-500",
-  },
-  {
-    icon: <FaMoneyBillWave />,
-    label: "Monthly Revenue",
-    value: "$4,500",
-    color: "bg-gradient-to-r from-yellow-400 to-orange-500",
-  },
-  {
-    icon: <FaGift />,
-    label: "Referrals",
-    value: 25,
-    color: "bg-gradient-to-r from-pink-400 to-red-500",
-  },
-];
-
-const navigationLinks = [
-  { path: "/admin/members", label: "Members", icon: <FaUsers /> },
-  { path: "/admin/trainers", label: "Trainers", icon: <FaUserTie /> },
-  { path: "/admin/products", label: "Products", icon: <FaShoppingCart /> },
-  { path: "/admin/diet-plan", label: "Diet Plans", icon: <FaClipboardList /> },
-  { path: "/admin/workout-plan", label: "Workout Plans", icon: <FaDumbbell /> },
-  {
-    path: "/admin/training-schedule",
-    label: "Schedules",
-    icon: <FaDumbbell />,
-  },
-  { path: "/admin/payment", label: "Payments", icon: <FaMoneyCheckAlt /> },
-  { path: "/admin/referral", label: "Referrals", icon: <FaGift /> },
-  {
-    path: "/admin/referral-dashboard",
-    label: "Referral Stats",
-    icon: <FaGift />,
-  },
-  { path: "/admin/classes", label: "Classes", icon: <FaDumbbell /> },
-];
-
-const StatCard = ({ icon, label, value, color }) => (
-  <div
-    className={`text-white p-6 rounded-2xl shadow-lg transform hover:scale-105 transition ${color}`}
-  >
-    <div className="text-4xl mb-3">{icon}</div>
-    <p className="text-sm uppercase tracking-wider text-white/80">{label}</p>
-    <p className="text-2xl font-bold">{value}</p>
-  </div>
-);
+// Import admin components
+import AdminClasses from "./AdminClasses";
+import AdminDietPlan from "./AdminDietPlan";
+import AdminMembers from "./AdminMembers";
+import AdminMembershipPlans from "./AdminMembershipPlans";
+import AdminPayment from "./AdminPayment";
+import AdminProducts from "./AdminProducts";
+import AdminReferral from "./AdminReferral";
+import AdminTrainers from "./AdminTrainers";
+import AdminTrainingSchedule from "./AdminTrainingSchedule";
+import AdminWorkoutPlan from "./AdminWorkoutPlan";
 
 const AdminDashboard = () => {
-  const location = useLocation();
+  const navigate = useNavigate();
+  const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [activeView, setActiveView] = useState("members");
+
+  // Admin user data
+  const admin = {
+    name: "Admin User",
+    role: "Administrator",
+    email: "admin@gymfreak.com",
+    profileImage: null,
+  };
 
   const handleLogout = () => {
     localStorage.clear();
-    window.location.href = "/admin/login";
+    navigate("/admin/login");
   };
 
+  const toggleSidebar = () => {
+    setSidebarOpen(!isSidebarOpen);
+  };
+
+  const menuItems = [
+    {
+      id: "members",
+      name: "Members",
+      icon: <FaUsers />,
+      component: <AdminMembers />,
+    },
+    {
+      id: "trainers",
+      name: "Trainers",
+      icon: <FaUserTie />,
+      component: <AdminTrainers />,
+    },
+    {
+      id: "membership-plans",
+      name: "Membership Plans",
+      icon: <FaIdCard />,
+      component: <AdminMembershipPlans />,
+    },
+    {
+      id: "products",
+      name: "Products",
+      icon: <FaStore />,
+      component: <AdminProducts />,
+    },
+    {
+      id: "inventory",
+      name: "Inventory",
+      icon: <FaBoxes />,
+      component: <AdminProducts />,
+    },
+    {
+      id: "diet-plans",
+      name: "Diet Plans",
+      icon: <FaClipboardList />,
+      component: <AdminDietPlan />,
+    },
+    {
+      id: "workout-plans",
+      name: "Workout Plans",
+      icon: <FaDumbbell />,
+      component: <AdminWorkoutPlan />,
+    },
+    {
+      id: "training-schedule",
+      name: "Training Schedule",
+      icon: <FaCalendarAlt />,
+      component: <AdminTrainingSchedule />,
+    },
+    {
+      id: "payments",
+      name: "Payments",
+      icon: <FaMoneyCheckAlt />,
+      component: <AdminPayment />,
+    },
+    {
+      id: "referrals",
+      name: "Referrals",
+      icon: <FaGift />,
+      component: <AdminReferral />,
+    },
+    {
+      id: "classes",
+      name: "Classes",
+      icon: <FaUsers />,
+      component: <AdminClasses />,
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-light">
+    <div className="flex h-screen w-full overflow-hidden bg-gray-900 text-white">
       {/* Sidebar */}
-      <aside className="w-64 bg-white/5 backdrop-blur-lg border-r border-gray-700 p-6 flex flex-col justify-between shadow-xl">
-        <div>
-          <h2 className="text-3xl font-extrabold text-accent mb-12 tracking-tight">
-            Gym Admin
-          </h2>
-          <nav className="space-y-3">
-            {navigationLinks.map((nav, idx) => (
-              <Link
-                key={idx}
-                to={nav.path}
-                className={`flex items-center gap-3 px-4 py-2 rounded-xl transition duration-200
-                  ${
-                    location.pathname === nav.path
-                      ? "bg-accent text-primary font-bold shadow"
-                      : "hover:bg-accent hover:text-primary text-gray-300"
-                  }`}
+      <div
+        className={`${
+          isSidebarOpen ? "w-64" : "w-20"
+        } bg-gray-800 h-screen flex-shrink-0 p-4 transition-all duration-300 flex flex-col overflow-hidden`}
+      >
+        <div className="flex justify-between items-center mb-8">
+          <div className={`${!isSidebarOpen && "hidden"} text-xl font-bold`}>
+            GymFreak Admin
+          </div>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors"
+          >
+            {isSidebarOpen ? <FaTimes /> : <FaBars />}
+          </button>
+        </div>
+
+        {/* Admin Profile */}
+        <div className="mb-8 text-center">
+          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-700 flex items-center justify-center">
+            {admin.profileImage ? (
+              <img
+                src={admin.profileImage}
+                alt={admin.name}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <FaUser className="text-3xl text-gray-400" />
+            )}
+          </div>
+          <div className={`${!isSidebarOpen && "hidden"}`}>
+            <h3 className="text-lg font-semibold">{admin.name}</h3>
+            <p className="text-gray-400 text-sm">{admin.role}</p>
+          </div>
+        </div>
+
+        {/* Navigation Menu */}
+        <div className="flex-1 flex flex-col justify-between min-h-0">
+          <nav className="space-y-2 overflow-y-auto pr-2">
+            {menuItems.map((item) => (
+              <button
+                type="button"
+                key={item.id}
+                onClick={() => setActiveView(item.id)}
+                className={`w-full flex items-center p-3 rounded-lg transition-colors ${
+                  activeView === item.id ? "bg-blue-600" : "hover:bg-gray-700"
+                }`}
               >
-                <span className="text-xl">{nav.icon}</span>
-                <span className="text-sm font-medium">{nav.label}</span>
-              </Link>
+                <span className="text-xl">{item.icon}</span>
+                <span className={`${!isSidebarOpen && "hidden"} ml-3`}>
+                  {item.name}
+                </span>
+              </button>
             ))}
           </nav>
-        </div>
 
-        <button
-          onClick={handleLogout}
-          className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl transition shadow"
-        >
-          <FaSignOutAlt /> Logout
-        </button>
-      </aside>
+          {/* Logout Button */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-red-500/30"
+          >
+            <FaSignOutAlt className="text-xl" />
+            <span className={`${!isSidebarOpen && "hidden"} ml-3 font-medium`}>
+              Logout
+            </span>
+          </button>
+        </div>
+      </div>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-10 overflow-auto text-white">
-        <h1 className="text-4xl font-extrabold mb-8 tracking-tight text-white">
-          Dashboard Overview
-        </h1>
+      <div className="flex-1 overflow-auto w-full h-screen">
+        <div className="p-8 h-full">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">
+              {menuItems.find((item) => item.id === activeView)?.name}
+            </h1>
+            <div className="flex items-center space-x-4">
+              <button
+                type="button"
+                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors relative"
+              >
+                <FaBell />
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
+                  3
+                </span>
+              </button>
+              <button
+                type="button"
+                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+              >
+                <FaCog />
+              </button>
+            </div>
+          </div>
 
-        {/* Stats Section */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {stats.map((stat, idx) => (
-            <StatCard key={idx} {...stat} />
-          ))}
+          {/* Dynamic Content */}
+          {menuItems.find((item) => item.id === activeView)?.component}
         </div>
-
-        {/* Navigation Cards */}
-        <h2 className="text-2xl font-semibold mb-6 text-gray-200">
-          Quick Access
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {navigationLinks.map((nav, idx) => (
-            <Link
-              key={idx}
-              to={nav.path}
-              className="bg-white/10 backdrop-blur-md border border-white/10 hover:bg-accent hover:text-primary p-6 rounded-2xl shadow-xl flex flex-col items-center text-center transition-all duration-300"
-            >
-              <div className="text-4xl mb-2">{nav.icon}</div>
-              <p className="text-lg font-semibold">{nav.label}</p>
-            </Link>
-          ))}
-        </div>
-      </main>
+      </div>
     </div>
   );
 };

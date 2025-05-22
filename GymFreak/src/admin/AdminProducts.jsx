@@ -1,5 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
+import {
+  FiTrash2,
+  FiPlus,
+  FiDollarSign,
+  FiTag,
+  FiEdit,
+  FiUpload,
+  FiInfo,
+  FiLoader,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiPackage,
+  FiSearch,
+  FiFilter
+} from "react-icons/fi";
+
 // Mock data for development
 const mockProducts = [
   {
@@ -88,20 +105,6 @@ const deleteProduct = async (id) => {
 
 const isAdmin = () => true; // Always return true for development
 
-import { toast } from "react-toastify";
-import {
-  FiTrash2,
-  FiPlus,
-  FiDollarSign,
-  FiTag,
-  FiEdit,
-  FiUpload,
-  FiInfo,
-  FiLoader,
-  FiAlertCircle,
-  FiCheckCircle,
-} from "react-icons/fi";
-
 const AdminProducts = () => {
   const [products, setProducts] = useState([]);
   const [newProduct, setNewProduct] = useState({
@@ -114,6 +117,9 @@ const AdminProducts = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -184,6 +190,8 @@ const AdminProducts = () => {
       const fileInput = document.getElementById("image-upload");
       if (fileInput) fileInput.value = "";
 
+      setShowAddModal(false);
+
       // Show success message
       toast.update(toastId, {
         render: "Product added successfully!",
@@ -232,254 +240,226 @@ const AdminProducts = () => {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Product Management
-          </h1>
-          <p className="text-gray-600">
-            Add, edit, and manage your product catalog
-          </p>
-        </div>
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         product.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || product.category.toLowerCase() === categoryFilter.toLowerCase();
+    return matchesSearch && matchesCategory;
+  });
 
-        {/* Add Product Card */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-8">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <FiPlus className="text-indigo-600 mr-2" size={20} />
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Add New Product
-                </h2>
+  if (isLoading) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+    </div>
+  );
+
+  return (
+    <div className="h-full bg-gray-900 text-white p-6">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+        <h1 className="text-3xl font-bold">Products Management</h1>
+        <button 
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          onClick={() => setShowAddModal(true)}
+          type="button"
+        >
+          <FiPlus />
+          Add New Product
+        </button>
+      </div>
+
+      {/* Filters Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="col-span-2">
+          <div className="relative">
+            <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+        </div>
+        <div>
+          <div className="relative">
+            <FiFilter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full pl-10 px-4 py-2 bg-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+            >
+              <option value="all">All Categories</option>
+              <option value="supplements">Supplements</option>
+              <option value="equipment">Equipment</option>
+              <option value="accessories">Accessories</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Products Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredProducts.map((product) => (
+          <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
+            <div className="relative pb-[100%]">
+              <img 
+                src={product.image} 
+                alt={product.name}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </div>
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-lg font-semibold">{product.name}</h3>
+                <span className="text-blue-400 font-bold">${product.price}</span>
+              </div>
+              <p className="text-gray-400 text-sm mb-2">{product.description}</p>
+              <div className="flex justify-between items-center">
+                <span className="px-2 py-1 bg-gray-700 text-sm rounded-lg">
+                  Stock: {product.stock_quantity}
+                </span>
+                <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-lg">
+                  {product.category}
+                </span>
+              </div>
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => handleDelete(product.id)}
+                  className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                  title="Delete"
+                >
+                  <FiTrash2 />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+                  title="Edit"
+                >
+                  <FiEdit />
+                </button>
               </div>
             </div>
+          </div>
+        ))}
+      </div>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-md flex items-center">
-                <FiInfo className="mr-2" />
-                {error}
+      {/* Add Product Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Add New Product</h2>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="p-2 hover:text-gray-400 transition-colors"
+              >
+                <FiPlus className="rotate-45" />
+              </button>
+            </div>
+            <form onSubmit={handleAddProduct} className="space-y-4">
+              <div>
+                <label className="block mb-2">Product Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={newProduct.name}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter product name"
+                />
               </div>
-            )}
-
-            <form
-              onSubmit={handleAddProduct}
-              className="space-y-4"
-              encType="multipart/form-data"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product Name *
-                  </label>
-                  <div className="relative">
-                    <input
-                      name="name"
-                      value={newProduct.name}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Premium Headphones"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Price *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiDollarSign className="text-gray-400" />
-                    </div>
-                    <input
-                      name="price"
-                      value={newProduct.price}
-                      onChange={handleInputChange}
-                      placeholder="0.00"
-                      className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Category *
-                  </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <FiTag className="text-gray-400" />
-                    </div>
-                    <input
-                      name="category"
-                      value={newProduct.category}
-                      onChange={handleInputChange}
-                      placeholder="e.g. Electronics, Clothing"
-                      className="w-full pl-8 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Product Image *
-                  </label>
-                  <div className="relative">
-                    <label className="flex flex-col items-center justify-center w-full h-full p-4 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-indigo-500 hover:bg-indigo-50 transition">
-                      <div className="flex flex-col items-center justify-center">
-                        <FiUpload className="text-indigo-600 mb-2" size={24} />
-                        <p className="text-sm text-gray-600">
-                          {newProduct.image
-                            ? newProduct.image.name
-                            : "Click to upload image"}
-                        </p>
-                      </div>
-                      <input
-                        id="image-upload"
-                        type="file"
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        className="hidden"
-                        required
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
-                  <textarea
-                    name="description"
-                    value={newProduct.description}
+              <div>
+                <label className="block mb-2">Description</label>
+                <textarea
+                  name="description"
+                  value={newProduct.description}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter product description"
+                  rows="3"
+                />
+              </div>
+              <div>
+                <label className="block mb-2">Price</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">$</span>
+                  <input
+                    type="number"
+                    name="price"
+                    value={newProduct.price}
                     onChange={handleInputChange}
-                    placeholder="Detailed product description..."
-                    rows="3"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                    required
+                    className="w-full pl-8 px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
                   />
                 </div>
               </div>
-
-              <div className="flex justify-end space-x-3">
+              <div>
+                <label className="block mb-2">Category</label>
+                <select
+                  name="category"
+                  value={newProduct.category}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select category</option>
+                  <option value="Supplements">Supplements</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Accessories">Accessories</option>
+                </select>
+              </div>
+              <div>
+                <label className="block mb-2">Product Image</label>
+                <div className="relative">
+                  <input
+                    type="file"
+                    id="image-upload"
+                    onChange={handleFileChange}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="flex items-center justify-center w-full px-4 py-2 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors"
+                  >
+                    <FiUpload className="mr-2" />
+                    Choose Image
+                  </label>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => {
-                    setNewProduct({
-                      name: "",
-                      description: "",
-                      price: "",
-                      category: "",
-                      image: "",
-                    });
-                    setError(null);
-                    const fileInput = document.getElementById("image-upload");
-                    if (fileInput) fileInput.value = "";
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                   disabled={isSubmitting}
                 >
-                  Reset
+                  Cancel
                 </button>
                 <button
                   type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
                   disabled={isSubmitting}
-                  className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition ${
-                    isSubmitting ? "opacity-75 cursor-not-allowed" : ""
-                  }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <FiLoader className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" />
+                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
                       Adding...
                     </>
                   ) : (
-                    "Add Product"
+                    'Add Product'
                   )}
                 </button>
               </div>
             </form>
           </div>
         </div>
-
-        {/* Product List */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-800">
-                  Product Catalog
-                </h2>
-                <p className="text-gray-600">
-                  {products.length} products available
-                </p>
-              </div>
-            </div>
-
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
-              </div>
-            ) : error ? (
-              <div className="text-center py-12 text-red-500">{error}</div>
-            ) : products.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                No products available. Add your first product above.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                  >
-                    <div className="relative pb-2/3 h-48">
-                      <img
-                        src={`http://localhost:8080${product.image}`}
-                        alt={product.name}
-                        className="absolute h-full w-full object-cover"
-                      />
-                    </div>
-                    <div className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold text-gray-800">
-                            {product.name}
-                          </h3>
-                          <p className="text-indigo-600 font-medium mt-1">
-                            ${product.price}
-                          </p>
-                          <span className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded-full mt-2">
-                            {product.category}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          disabled={isLoading}
-                          className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition disabled:opacity-50"
-                          title="Delete product"
-                        >
-                          <FiTrash2 />
-                        </button>
-                      </div>
-                      <p className="text-gray-500 text-sm mt-3 line-clamp-2">
-                        {product.description}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

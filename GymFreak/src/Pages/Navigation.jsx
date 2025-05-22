@@ -1,17 +1,21 @@
-import { Link } from "react-router-dom";
-import { FaDumbbell, FaShoppingCart, FaUserShield, FaSignOutAlt, FaSignInAlt } from 'react-icons/fa';
+import { Link, useLocation } from "react-router-dom";
+import BackButton from '../Components/BackButton';
+import { FaDumbbell, FaShoppingCart, FaUserShield, FaSignOutAlt, FaSignInAlt, FaBoxes } from 'react-icons/fa';
 
 const Navigation = ({ isAuthenticated, onLogout }) => {
   return (
     <nav className="bg-secondary py-3 px-6 shadow-lg sticky top-0 z-50">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Logo Section */}
-        <Link to="/" className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-accent rounded-full">
-            <FaDumbbell className="text-2xl text-light" />
-          </div>
-          <span className="text-xl font-bold text-light tracking-wide">GymFreak</span>
-        </Link>
+        {/* Back Button and Logo Section */}
+        <div className="flex items-center space-x-6">
+          <BackButton />
+          <Link to="/" className="flex items-center space-x-3">
+            <div className="flex items-center justify-center w-10 h-10 bg-accent rounded-full">
+              <FaDumbbell className="text-2xl text-light" />
+            </div>
+            <span className="text-xl font-bold text-light tracking-wide">GymFreak</span>
+          </Link>
+        </div>
 
         {/* Navigation Links */}
         <div className="flex items-center justify-center flex-grow">
@@ -33,13 +37,22 @@ const Navigation = ({ isAuthenticated, onLogout }) => {
             </Link>
 
             {isAuthenticated && (
-              <Link 
-                to="/admin" 
-                className="flex items-center space-x-2 text-light hover:text-accent transition-colors duration-200"
-              >
-                <FaUserShield className="text-lg" />
-                <span>Admin</span>
-              </Link>
+              <>
+                <Link 
+                  to="/admin" 
+                  className="flex items-center space-x-2 text-light hover:text-accent transition-colors duration-200"
+                >
+                  <FaUserShield className="text-lg" />
+                  <span>Admin</span>
+                </Link>
+                <Link 
+                  to="/admin/inventory" 
+                  className="flex items-center space-x-2 text-light hover:text-accent transition-colors duration-200"
+                >
+                  <FaBoxes className="text-lg" />
+                  <span>Inventory</span>
+                </Link>
+              </>
             )}
           </div>
         </div>
