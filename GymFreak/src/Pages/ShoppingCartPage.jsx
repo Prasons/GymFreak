@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
-import { FaTrash, FaMinus, FaPlus, FaArrowLeft } from "react-icons/fa";
+import { FaTrash, FaMinus, FaPlus, FaArrowLeft, FaExclamationTriangle } from "react-icons/fa";
+import { toast } from "react-toastify";
 
 const ShoppingCartPage = () => {
   const navigate = useNavigate();
@@ -51,8 +52,23 @@ const ShoppingCartPage = () => {
                 className="w-32 h-32 object-cover rounded-md"
               />
               <div className="flex-grow">
-                <h3 className="text-xl font-semibold mb-2">{item.name}</h3>
-                <p className="text-gray-400 mb-4">{item.description}</p>
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-semibold">{item.name}</h3>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    item.stock > 5 ? 'bg-green-500/20 text-green-400' : 
+                    item.stock > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {item.stock > 5 ? 'In Stock' : item.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                  </span>
+                </div>
+                <p className="text-gray-400 mb-2">{item.description}</p>
+                {item.stock !== undefined && item.quantity > item.stock && (
+                  <div className="flex items-center text-yellow-400 text-sm mb-2">
+                    <FaExclamationTriangle className="mr-1" />
+                    Only {item.stock} available (reduced from {item.quantity})
+                  </div>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
@@ -61,12 +77,19 @@ const ShoppingCartPage = () => {
                     >
                       <FaMinus />
                     </button>
-                    <span className="text-xl font-medium w-8 text-center">
-                      {item.quantity}
+                    <span className={`text-xl font-medium w-8 text-center ${
+                      item.stock !== undefined && item.quantity > item.stock ? 'text-yellow-400' : ''
+                    }`}>
+                      {item.stock !== undefined && item.quantity > item.stock ? item.stock : item.quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      className="p-2 bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors"
+                      disabled={item.stock !== undefined && item.quantity >= item.stock}
+                      className={`p-2 rounded-full transition-colors ${
+                        item.stock !== undefined && item.quantity >= item.stock
+                          ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
+                          : 'bg-zinc-800 hover:bg-zinc-700'
+                      }`}
                     >
                       <FaPlus />
                     </button>
@@ -93,19 +116,37 @@ const ShoppingCartPage = () => {
             <span className="text-xl">Total:</span>
             <span className="text-2xl font-bold">${getCartTotal().toFixed(2)}</span>
           </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate('/gymequipment')}
-              className="flex-1 px-6 py-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors"
-            >
-              Continue Shopping
-            </button>
-            <button
-              onClick={handleCheckout}
-              className="flex-1 px-6 py-3 bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-            >
-              Proceed to Checkout
-            </button>
+          <div className="space-y-4">
+            {cartItems.some(item => item.stock !== undefined && item.quantity > item.stock) && (
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm flex items-start">
+                <FaExclamationTriangle className="mt-0.5 mr-2 flex-shrink-0" />
+                <div>
+                  <p className="font-medium mb-1">Inventory Adjustment</p>
+                  <p>Some items in your cart have been adjusted to match available stock.</p>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-4">
+              <button
+                onClick={() => navigate('/gymequipment')}
+                className="flex-1 px-6 py-3 bg-zinc-800 rounded-lg hover:bg-zinc-700 transition-colors"
+              >
+                Continue Shopping
+              </button>
+              <button
+                onClick={handleCheckout}
+                disabled={cartItems.some(item => item.stock !== undefined && item.stock === 0)}
+                className={`flex-1 px-6 py-3 rounded-lg transition-colors ${
+                  cartItems.some(item => item.stock !== undefined && item.stock === 0)
+                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {cartItems.some(item => item.stock !== undefined && item.stock === 0)
+                  ? 'Remove Out of Stock Items to Proceed'
+                  : 'Proceed to Checkout'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

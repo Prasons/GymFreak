@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -302,19 +302,21 @@ const AdminLogin = () => {
             </SubmitButton>
 
             <Box sx={{ textAlign: "center", mt: 2 }}>
-              <MuiLink
-                component={Link}
+              <Link
                 to="/"
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                  "&:hover": {
-                    color: "primary.main",
+                style={{
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  '&:hover': {
+                    color: 'primary.main',
                   },
                 }}
               >
                 ← Back to Home
-              </MuiLink>
+              </Link>
             </Box>
           </Form>
         </Box>

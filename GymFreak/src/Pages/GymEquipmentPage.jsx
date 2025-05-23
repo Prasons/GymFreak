@@ -170,7 +170,21 @@ const GymEquipmentPage = () => {
   }, []);
 
   const handleAddToCart = (item) => {
+    if (item.stock <= 0) return;
+    
+    // Check if adding this item would exceed available stock
+    const cartItem = cartItems.find(cartItem => cartItem.id === item.id);
+    const currentQuantityInCart = cartItem ? cartItem.quantity : 0;
+    
+    if (currentQuantityInCart >= item.stock) {
+      alert(`Sorry, only ${item.stock} ${item.name} available in stock.`);
+      return;
+    }
+    
     addToCart(item);
+    
+    // Show a success message
+    alert(`${item.name} added to cart!`);
   };
 
   const goToCart = () => {
@@ -272,9 +286,16 @@ const GymEquipmentPage = () => {
                   <h3 className="text-lg font-semibold mb-1">{item.name}</h3>
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
-                <div className="flex items-center justify-between text-sm text-gray-400 mb-4">
-                  <span>{item.category}</span>
-                  <span>Stock: {item.stock}</span>
+                <div className="flex items-center justify-between text-sm mb-4">
+                  <span className="text-gray-400">{item.category}</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    item.stock > 10 ? 'bg-green-500/20 text-green-400' : 
+                    item.stock > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {item.stock > 10 ? `In Stock (${item.stock})` : 
+                     item.stock > 0 ? `Low Stock (${item.stock} left)` : 'Out of Stock'}
+                  </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -288,13 +309,22 @@ const GymEquipmentPage = () => {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => handleAddToCart(item)}
-                className="w-full py-3 bg-emerald-600 text-white rounded-b-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
-              >
-                <FaShoppingCart />
-                Add to Cart
-              </button>
+              {item.stock > 0 ? (
+                <button
+                  onClick={() => handleAddToCart(item)}
+                  className="w-full py-3 bg-emerald-600 text-white rounded-b-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"
+                >
+                  <FaShoppingCart />
+                  Add to Cart
+                </button>
+              ) : (
+                <button
+                  disabled
+                  className="w-full py-3 bg-gray-700 text-gray-500 rounded-b-xl cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  Out of Stock
+                </button>
+              )}
             </div>
           ))}
         </div>
