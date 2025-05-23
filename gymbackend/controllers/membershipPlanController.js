@@ -5,7 +5,7 @@ import MembershipPlan from "../models/membershipPlanModel.js";
 // @access  Private/Admin
 export const createMembershipPlan = async (req, res) => {
   try {
-    const { name, description, price, duration_days, features, is_popular } = req.body;
+    const { name, description, price, duration_days, features, is_popular, is_active } = req.body;
 
     if (!name || !price || !duration_days || !features || !Array.isArray(features)) {
       return res.status(400).json({
@@ -20,7 +20,8 @@ export const createMembershipPlan = async (req, res) => {
       price: parseFloat(price),
       duration_days: parseInt(duration_days, 10),
       features,
-      is_popular: Boolean(is_popular)
+      is_popular: Boolean(is_popular),
+      is_active: Boolean(is_active)
     });
 
     res.status(201).json({

@@ -51,7 +51,7 @@ export const addProduct = async (req, res) => {
     });
 
     // Get the admin ID from the authenticated admin
-    const adminId = req.admin?.id;
+    const adminId = req.user?.id;
     
     if (!adminId) {
       return res.status(403).json({

@@ -1,13 +1,13 @@
 import pool from "../config/db.js";
 
 class MembershipPlan {
-  static async create({ name, description, price, duration_days, features, is_popular = false }) {
+  static async create({ name, description, price, duration_days, features, is_popular = false, is_active =false }) {
     const query = `
-      INSERT INTO membership_plans (name, description, price, duration_days, features, is_popular)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO membership_plans (name, description, price, duration_days, features, is_popular, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
-    const values = [name, description, price, duration_days, JSON.stringify(features), is_popular];
+    const values = [name, description, price, duration_days, JSON.stringify(features), is_popular, is_active];
     const { rows } = await pool.query(query, values);
     return rows[0];
   }

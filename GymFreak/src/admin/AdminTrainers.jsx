@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FaEdit, FaTrash, FaCheck, FaBan, FaUserPlus, FaTimes } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { changeTrainerStatus, deleteTrainer, getAllTrainers, registerTrainer, updateTrainer } from "../api/trainers";
 
 // Mock data for development
 const mockTrainers = [
@@ -26,28 +27,11 @@ const mockTrainers = [
 
 // Mock API functions
 const mockApi = {
-  getTrainers: () => new Promise((resolve) => setTimeout(() => resolve([...mockTrainers]), 500)),
-  updateStatus: (id, status) => new Promise((resolve) => {
-    const trainerIndex = mockTrainers.findIndex(t => t.id === id);
-    if (trainerIndex !== -1) {
-      mockTrainers[trainerIndex].status = status;
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  updateTrainer: (id, data) => new Promise((resolve) => {
-    const trainerIndex = mockTrainers.findIndex(t => t.id === id);
-    if (trainerIndex !== -1) {
-      mockTrainers[trainerIndex] = { ...mockTrainers[trainerIndex], ...data };
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  deleteTrainer: (id) => new Promise((resolve) => {
-    const trainerIndex = mockTrainers.findIndex(t => t.id === id);
-    if (trainerIndex !== -1) {
-      mockTrainers.splice(trainerIndex, 1);
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  })
+  getTrainers: () => getAllTrainers(),
+  updateStatus: (id, status) => changeTrainerStatus(id, status),
+  updateTrainer: (id, data) => updateTrainer(id, data),
+  deleteTrainer: (id) => deleteTrainer(id),
+  addTrainer:(trainerData) => registerTrainer(trainerData),
 };
 
 const AdminTrainers = () => {
@@ -127,6 +111,7 @@ const AdminTrainers = () => {
       toast.error("Failed to update trainer");
     }
   };
+ 
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -158,13 +143,7 @@ const AdminTrainers = () => {
     }
     setProcessing(true);
     try {
-      const newTrainer = {
-        id: Date.now(),
-        ...addForm,
-        status: "Active",
-        joinDate: new Date().toISOString().split("T")[0]
-      };
-      mockTrainers.push(newTrainer);
+      await mockApi.addTrainer({...addForm,status:'Active'});
       await fetchTrainers();
       setShowAddModal(false);
       setAddForm({ name: "", email: "", specialty: "", experience: "" });

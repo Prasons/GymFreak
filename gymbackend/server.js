@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+dotenv.config();
 import cors from "cors";
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -7,6 +8,7 @@ import { connectDB } from "./config/db.js";
 
 // Import routes
 import userRoutes from "./routes/userRoutes.js";
+import trainerRoutes from "./routes/trainerRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import dietPlanRoutes from "./routes/dietPlanRoutes.js";
@@ -46,10 +48,6 @@ const allowedOrigins = [
   // Always allow localhost in any environment for development
   /^http:\/\/localhost(:[0-9]+)?$/,  // Match any localhost with any port
   /^http:\/\/127\.0\.0\.1(:[0-9]+)?$/,  // Match any 127.0.0.1 with any port
-  'http://localhost:5174',  // Vite dev server
-  'http://127.0.0.1:5174',  // Vite dev server alternative
-  'http://localhost:5173',  // Vite dev server
-  'http://127.0.0.1:5173',  // Vite dev server alternative
   
   // Add production domains (only used in production)
   ...(isProduction ? [
@@ -66,33 +64,25 @@ if (isProduction) {
 // CORS options
 const corsOptions = {
   origin: (origin, callback) => {
-    console.log('Incoming origin:', origin);
-    
     // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      console.log('No origin, allowing request');
-      return callback(null, true);
-    }
+    if (!origin) return callback(null, true);
     
     // Check if origin matches any allowed pattern
-    const isAllowed = allowedOrigins.some(pattern => {
+    if (allowedOrigins.some(pattern => {
       if (typeof pattern === 'string') {
         return pattern === origin;
       } else if (pattern instanceof RegExp) {
         return pattern.test(origin);
       }
       return false;
-    });
-    
-    if (isAllowed) {
-      console.log(`Origin ${origin} is allowed`);
+    })) {
       return callback(null, true);
     }
     
     // Origin not allowed
     console.error(`CORS error: ${origin} not in allowed origins`);
     console.log('Allowed origins:', allowedOrigins);
-    return callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+    return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -108,15 +98,8 @@ app.use(express.urlencoded({ extended: true }));
 // Apply CORS to all routes
 app.use(cors(corsOptions));
 
-// Handle preflight requests
+// Enable CORS pre-flight across all routes
 app.options('*', cors(corsOptions));
-
-// Log all incoming requests for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
-  console.log('Headers:', req.headers);
-  next();
-});
 
 // Request logging middleware
 if (process.env.NODE_ENV !== 'production') {
@@ -131,6 +114,7 @@ app.use("/uploads", express.static(path.join(__dirname, 'uploads')));
 
 // API Routes
 app.use("/api/users", userRoutes);
+app.use("/api/trainers", trainerRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/diet-plans", dietPlanRoutes);
@@ -140,7 +124,9 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/membership-plans", membershipPlanRoutes);
 app.use("/api/progress", progressRoutes);
-app.use("/api/test", testRoutes);
+
+// Test routes (temporary, remove in production)
+app.use('/api/test', testRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

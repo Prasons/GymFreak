@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { getProducts, createProduct, deleteProduct } from '../api/productApi';
 import { toast } from "react-toastify";
 import {
   FiTrash2,
@@ -66,42 +67,8 @@ const mockProducts = [
   }
 ];
 
-// Mock API functions
-const getProducts = async () => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve([...mockProducts]), 500);
-  });
-};
 
-const createProduct = async (formData) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const newProduct = {
-        id: mockProducts.length + 1,
-        name: formData.get('name'),
-        description: formData.get('description'),
-        price: parseFloat(formData.get('price')),
-        category: formData.get('category'),
-        stock_quantity: parseInt(formData.get('stock_quantity')),
-        image: 'https://via.placeholder.com/150'
-      };
-      mockProducts.push(newProduct);
-      resolve(newProduct);
-    }, 500);
-  });
-};
 
-const deleteProduct = async (id) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const index = mockProducts.findIndex(p => p.id === id);
-      if (index > -1) {
-        mockProducts.splice(index, 1);
-      }
-      resolve();
-    }, 500);
-  });
-};
 
 const isAdmin = () => true; // Always return true for development
 
@@ -155,86 +122,114 @@ const AdminProducts = () => {
   const handleAddProduct = async (e) => {
     e.preventDefault();
 
-    // Validate form
-    if (!newProduct.name || !newProduct.price || !newProduct.category) {
-      setError("Please fill in all required fields");
-      toast.error("Please fill in all required fields");
+    // Check admin status
+    if (!isAdmin()) {
+      toast.error('You do not have permission to add products');
+      navigate('/login');
       return;
     }
 
-    const newProductData = {
-      ...newProduct,
-      id: Math.max(0, ...mockProducts.map(p => p.id)) + 1,
-      image: 'https://via.placeholder.com/150',
-      stock_quantity: 10
-    };
+    // Validate required fields
+    if (!newProduct.name || !newProduct.price || !newProduct.category) {
+      setError('Please fill in all required fields');
+      toast.error('Please fill in all required fields');
+      return;
+    }
 
+    if (!newProduct.image) {
+      setError('Please select an image');
+      toast.error('Please select an image');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('name', newProduct.name);
+    formData.append('description', newProduct.description || '');
+    formData.append('price', newProduct.price);
+    formData.append('category', newProduct.category);
+    formData.append('stock_quantity', '10');
+    formData.append('image', newProduct.image);
+
+    const toastId = toast.loading('Adding product...');
     try {
       setIsSubmitting(true);
-      const toastId = toast.loading("Adding product...");
-
-      // Add to mock data
-      mockProducts.push(newProductData);
-      setProducts([...mockProducts]);
-
+      setError(null);
+      
+      // Show loading toast
+      
+      await createProduct(formData);
+      
+      // Update the products list
+      const data = await getProducts();
+      setProducts(data);
+      
       // Reset form
       setNewProduct({
-        name: "",
-        description: "",
-        price: "",
-        category: "",
-        image: "",
+        name: '',
+        description: '',
+        price: '',
+        category: '',
+        image: null,
       });
-
+      setShowAddModal(false)
       // Clear file input
-      const fileInput = document.getElementById("image-upload");
-      if (fileInput) fileInput.value = "";
-
-      setShowAddModal(false);
-
+      const fileInput = document.getElementById('image-upload');
+      if (fileInput) fileInput.value = '';
+      
       // Show success message
       toast.update(toastId, {
-        render: "Product added successfully!",
-        type: "success",
+        render: 'Product added successfully!',
+        type: 'success',
         isLoading: false,
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error adding product:", error);
-      setError("Failed to add product. Please try again.");
-      toast.error("Failed to add product");
+      console.error('Error adding product:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to add product. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage,{ id: toastId });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
+      return;
+    }
+
+    // Check admin status
+    if (!isAdmin()) {
+      toast.error('You do not have permission to delete products');
+      navigate('/login');
       return;
     }
 
     try {
       setIsLoading(true);
       setError(null);
-      const toastId = toast.loading("Deleting product...");
-
-      // Remove from mock data
-      const index = mockProducts.findIndex(p => p.id === id);
-      if (index > -1) {
-        mockProducts.splice(index, 1);
-        setProducts([...mockProducts]);
-      }
-
+      
+      // Show loading toast
+      const toastId = toast.loading('Deleting product...');
+      
+      await deleteProduct(id);
+      
+      // Update the products list
+      const data = await getProducts();
+      setProducts(data);
+      
+      // Show success message
       toast.update(toastId, {
-        render: "Product deleted successfully!",
-        type: "success",
+        render: 'Product deleted successfully!',
+        type: 'success',
         isLoading: false,
         autoClose: 3000,
       });
     } catch (error) {
-      console.error("Error deleting product:", error);
-      setError("Failed to delete product. Please try again.");
-      toast.error("Failed to delete product");
+      console.error('Error deleting product:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to delete product. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -305,7 +300,7 @@ const AdminProducts = () => {
           <div key={product.id} className="bg-gray-800 rounded-xl overflow-hidden shadow-lg">
             <div className="relative pb-[100%]">
               <img 
-                src={product.image} 
+                src={`http://localhost:8080${product.image_url}`} 
                 alt={product.name}
                 className="absolute inset-0 w-full h-full object-cover"
               />

@@ -106,7 +106,6 @@ const MembershipPlanForm = ({ plan, onClose, onSuccess }) => {
         duration_days: parseInt(formData.duration_days),
         features: formData.features.filter(f => f.trim() !== '')
       };
-
       if (plan) {
         await updateMembershipPlan(plan.id, dataToSubmit);
         toast.success('Membership plan updated successfully');

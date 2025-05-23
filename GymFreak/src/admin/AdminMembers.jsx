@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { FaEdit, FaTrash, FaCheck, FaBan, FaUserPlus, FaTimes, FaEnvelope } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { getAllUsers, deleteUser, updateUser, changeUserStatus } from "../api/userApi";
 
 // Mock data for development
 const mockMembers = [
@@ -44,28 +45,10 @@ const mockMembers = [
 
 // Mock API functions
 const mockApi = {
-  getMembers: () => new Promise((resolve) => setTimeout(() => resolve([...mockMembers]), 500)),
-  updateStatus: (id, status) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers[memberIndex].status = status;
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  updateMember: (id, data) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers[memberIndex] = { ...mockMembers[memberIndex], ...data };
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  }),
-  deleteMember: (id) => new Promise((resolve) => {
-    const memberIndex = mockMembers.findIndex(m => m.id === id);
-    if (memberIndex !== -1) {
-      mockMembers.splice(memberIndex, 1);
-    }
-    setTimeout(() => resolve({ success: true }), 300);
-  })
+  getMembers: () => getAllUsers(),
+  updateStatus: (id, status) => changeUserStatus(id, status),
+  updateMember: (id, data) => updateUser(id, data),
+  deleteMember: (id) => deleteUser(id),
 };
 
 const AdminMembers = () => {
@@ -160,38 +143,7 @@ const AdminMembers = () => {
     }
   };
 
-  const handleAddMember = async (e) => {
-    e.preventDefault();
-    if (!addForm.name.trim() || !addForm.email.trim()) {
-      toast.error("Name and email are required");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addForm.email)) {
-      toast.error("Please enter a valid email address");
-      return;
-    }
-    setProcessing(true);
-    try {
-      // In a real app, this would be an API call
-      const newMember = {
-        id: Date.now(),
-        ...addForm,
-        status: "Active",
-        joinDate: new Date().toISOString().split("T")[0],
-        lastActive: new Date().toISOString().split("T")[0]
-      };
-      mockMembers.push(newMember);
-      await fetchMembers();
-      setShowAddModal(false);
-      setAddForm({ name: "", email: "", membershipType: "Basic" });
-      toast.success("Member added successfully");
-    } catch (error) {
-      console.error("Error adding member:", error);
-      toast.error("Failed to add member");
-    } finally {
-      setProcessing(false);
-    }
-  };
+ 
 
   const filteredMembers = members
     .filter(member => {
@@ -216,14 +168,7 @@ const AdminMembers = () => {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold">Members Management</h1>
-        <button 
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          onClick={() => setShowAddModal(true)}
-          type="button"
-        >
-          <FaUserPlus />
-          Add New Member
-        </button>
+       
       </div>
 
       {/* Filters Section */}
@@ -371,81 +316,7 @@ const AdminMembers = () => {
         </div>
       </div>
 
-      {/* Add Member Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Add New Member</h2>
-              <button
-                type="button"
-                onClick={() => setShowAddModal(false)}
-                className="p-2 hover:text-gray-400 transition-colors"
-              >
-                <FaTimes />
-              </button>
-            </div>
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <div>
-                <label className="block mb-2">Name</label>
-                <input
-                  type="text"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter member name"
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Email</label>
-                <input
-                  type="email"
-                  value={addForm.email}
-                  onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter email address"
-                />
-              </div>
-              <div>
-                <label className="block mb-2">Membership Type</label>
-                <select
-                  value={addForm.membershipType}
-                  onChange={(e) => setAddForm({ ...addForm, membershipType: e.target.value })}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="Basic">Basic</option>
-                  <option value="Premium">Premium</option>
-                  <option value="Pro">Pro</option>
-                </select>
-              </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
-                  disabled={processing}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2"
-                  disabled={processing}
-                >
-                  {processing ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                      Adding...
-                    </>
-                  ) : (
-                    'Add Member'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+    
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

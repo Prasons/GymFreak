@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../api/userApi";
 import { saveTokens } from "../utils/auth";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
+import { Box } from "@mui/material";
 
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -113,6 +114,23 @@ export default function Login({ onLogin }) {
             Login
           </button>
         </form>
+         <Box sx={{ textAlign: "center", mt: 2 }}>
+              <Link
+                to="/"
+                style={{
+                  color: 'white',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  '&:hover': {
+                    color: 'primary.main',
+                  },
+                }}
+              >
+                ← Back to Home
+              </Link>
+            </Box>
       </div>
     </div>
   );

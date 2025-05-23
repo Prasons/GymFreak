@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { getAccessToken, getAdminToken } from '../utils/auth';
 
-const BASE_URL = 'http://localhost:8080/api/users';
+const BASE_URL = 'http://localhost:8080/api/trainers';
 
-// User authentication
-export const loginUser = async (email, password) => {
+// Trainer authentication
+export const loginTrainer = async (email, password) => {
   try {
     const response = await axios.post(`${BASE_URL}/login`, { email, password });
     console.log('Login response:', response.data);
@@ -28,7 +28,7 @@ export const loginUser = async (email, password) => {
   }
 };
 
-export const registerUser = async (userData) => {
+export const registerTrainer = async (userData) => {
   try {
     const response = await axios.post(`${BASE_URL}/register`, userData);
     return response.data;
@@ -38,7 +38,7 @@ export const registerUser = async (userData) => {
   }
 };
 
-// User profile
+// Trainer profile
 export const getProfile = async () => {
   try {
     const token = getAccessToken();
@@ -66,7 +66,7 @@ export const updateProfile = async (userData) => {
 };
 
 // Admin user management
-export const getAllUsers = async () => {
+export const getAllTrainers = async () => {
   try {
     const token = getAdminToken();
     const response = await axios.get(BASE_URL, {
@@ -79,7 +79,7 @@ export const getAllUsers = async () => {
   }
 };
 
-export const getUserById = async (id) => {
+export const getTrainerById = async (id) => {
   try {
     const token = getAdminToken();
     const response = await axios.get(`${BASE_URL}/${id}`, {
@@ -92,7 +92,7 @@ export const getUserById = async (id) => {
   }
 };
 
-export const updateUser = async (id, userData) => {
+export const updateTrainer = async (id, userData) => {
   try {
     const token = getAdminToken();
     const response = await axios.put(`${BASE_URL}/${id}`, userData, {
@@ -105,7 +105,7 @@ export const updateUser = async (id, userData) => {
   }
 };
 
-export const changeUserStatus = async (id, status) => {
+export const changeTrainerStatus = async (id, status) => {
   try {
     const token = getAdminToken();
     const response = await axios.patch(
@@ -120,7 +120,7 @@ export const changeUserStatus = async (id, status) => {
   }
 };
 
-export const deleteUser = async (id) => {
+export const deleteTrainer = async (id) => {
   try {
     const token = getAdminToken();
     const response = await axios.delete(`${BASE_URL}/${id}`, {

@@ -10,47 +10,32 @@ const refreshTokens = new Map();
 // Register
 import { useReferralCode, completeReferral, generateReferralCode } from "./referralController.js";
 
-export const registerUser = async (req, res) => {
-  const { first_name, last_name, email, password, referral_code } = req.body;
+export const registerTrainer = async (req, res) => {
+  const { name, email, experience, specialty,status } = req.body;
 
   try {
-    const userExists = await pool.query(
-      "SELECT * FROM users WHERE email = $1",
+    const trainerExists = await pool.query(
+      "SELECT * FROM trainers WHERE email = $1",
       [email]
     );
 
-    if (userExists.rows.length > 0) {
-      return res.status(400).json({ message: "User already exists" });
+    if (trainerExists.rows.length > 0) {
+      return res.status(400).json({ message: "Trainer already exists" });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 1. If referral_code provided, create pending referral
-    if (referral_code) {
-      await useReferralCode({ body: { referral_code, referred_email: email } }, { status: () => ({ json: () => {} }) });
-    }
-
-    const newUser = await pool.query(
-      `INSERT INTO users 
-       (first_name, last_name, email, password, status) 
-       VALUES ($1, $2, $3, $4, 'active') 
-       RETURNING id, first_name, last_name, email, status, created_at`,
-      [first_name, last_name, email, hashedPassword]
+    const newTrainer = await pool.query(
+  `INSERT INTO trainers 
+   (name, email, experience, specialty, status) 
+   VALUES ($1, $2, $3, $4, $5) 
+   RETURNING *`,
+  [name, email, experience, specialty, status]
     );
-
-    // 2. Generate a referral code for the new user
-    await generateReferralCode(newUser.rows[0].id);
-
-    // 3. If referral_code was used, complete the referral
-    if (referral_code) {
-      await completeReferral(email, newUser.rows[0].id);
-    }
-
+  
     res.status(201).json({ 
-      message: "User created successfully", 
-      user: {
-        ...newUser.rows[0],
-        name: `${first_name || ''} ${last_name || ''}`.trim() || email
+      message: "Trainer created successfully", 
+      trainer: {
+        ...newTrainer.rows[0],
+        name: `${name || ''}`.trim() 
       } 
     });
   } catch (err) {
@@ -60,34 +45,34 @@ export const registerUser = async (req, res) => {
 };
 
 // Login
-export const loginUser = async (req, res) => {
+export const loginTrainer = async (req, res) => {
   const { email, password, isAdmin = false } = req.body; // Added isAdmin to differentiate login type
 
   try {
     console.log('Login attempt for email:', email);
     
     // Determine the table to query based on isAdmin flag
-    const table = isAdmin ? "admins" : "users";
+    const table = isAdmin ? "admins" : "trainers";
     console.log('Querying table:', table);
 
-    const user = await pool.query(`SELECT * FROM ${table} WHERE email = $1`, [email]);
-    console.log('Query result:', user.rows);
+    const trainer = await pool.query(`SELECT * FROM ${table} WHERE email = $1`, [email]);
+    console.log('Query result:', trainer.rows);
 
-    if (user.rows.length === 0) {
-      console.log('No user found with email:', email);
+    if (trainer.rows.length === 0) {
+      console.log('No trainer found with email:', email);
       return res.status(400).json({ message: "Invalid email" });
     }
 
-    // Check user status
-    if (user.rows[0].status !== 'active') {
-      console.log('User account is not active:', user.status);
+    // Check trainer status
+    if (trainer.rows[0].status !== 'active') {
+      console.log('Trainer account is not active:', trainer.status);
       return res.status(403).json({ message: "Account is not active" });
     }
 
     console.log('Input password:', password);
-    console.log('Stored hash:', user.rows[0].password);
+    console.log('Stored hash:', trainer.rows[0].password);
     
-    const isMatch = await bcrypt.compare(password, user.rows[0].password);
+    const isMatch = await bcrypt.compare(password, trainer.rows[0].password);
     console.log('Password match result:', isMatch);
 
     if (!isMatch) {
@@ -96,7 +81,7 @@ export const loginUser = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user.rows[0].id, isAdmin: isAdmin || false }, // Include isAdmin in the token payload
+      { trainerId: trainer.rows[0].id, isAdmin: isAdmin || false }, // Include isAdmin in the token payload
       process.env.JWT_SECRET,
       {
         expiresIn: "15m", // Shorter expiration for access token
@@ -105,7 +90,7 @@ export const loginUser = async (req, res) => {
 
     const refreshToken = crypto.randomBytes(40).toString("hex");
     refreshTokens.set(refreshToken, {
-      userId: user.rows[0].id,
+      trainerId: trainer.rows[0].id,
       isAdmin: isAdmin || false,
     });
 
@@ -113,11 +98,11 @@ export const loginUser = async (req, res) => {
       message: "Login successful", 
       token, 
       refreshToken,
-      user: {
-        id: user.rows[0].id,
-        email: user.rows[0].email,
-        first_name: user.rows[0].first_name,
-        last_name: user.rows[0].last_name,
+      trainer: {
+        id: trainer.rows[0].id,
+        email: trainer.rows[0].email,
+        name: trainer.rows[0].name,
+        last_name: trainer.rows[0].last_name,
         isAdmin: isAdmin || false
       }
     };
@@ -138,9 +123,9 @@ export const refreshAccessToken = (req, res) => {
     return res.status(403).json({ message: "Invalid refresh token" });
   }
 
-  const { userId, isAdmin } = refreshTokens.get(refreshToken);
+  const { trainerId, isAdmin } = refreshTokens.get(refreshToken);
 
-  const newToken = jwt.sign({ userId, isAdmin }, process.env.JWT_SECRET, {
+  const newToken = jwt.sign({ trainerId, isAdmin }, process.env.JWT_SECRET, {
     expiresIn: "15m",
   });
 
@@ -181,12 +166,12 @@ export const adminLogin = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const result = await pool.query(
-      "SELECT id, name, email, status FROM users WHERE id = $1",
-      [req.user.userId]
+      "SELECT id, name, email, status FROM trainers WHERE id = $1",
+      [req.user.trainerId]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Trainer not found" });
     }
 
     res.json(result.rows[0]);
@@ -197,69 +182,69 @@ export const getProfile = async (req, res) => {
 };
 
 // --- Member Management ---
-// Get all users (admin only)
-export const getAllUsers = async (req, res) => {
+// Get all trainers (admin only)
+export const getAllTrainers = async (req, res) => {
   try {
-    const result = await pool.query("SELECT id, first_name, email, status FROM users");
-    // Combine first_name and last_name into a single name field for the frontend
-    const users = result.rows.map(user => ({
-      ...user,
-      name: `${user.first_name || ''}`
+    const result = await pool.query("SELECT * FROM trainers");
+    // Combine name and last_name into a single name field for the frontend
+    const trainers = result.rows.map(trainer => ({
+      ...trainer,
+      name: `${trainer.name || ''}`
     }));
-    res.json(users);
+    res.json(trainers);
   } catch (error) {
-    console.error("Error fetching users:", error.message);
+    console.error("Error fetching trainers:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get single user by ID (admin or self)
-export const getUserById = async (req, res) => {
+// Get single trainer by ID (admin or self)
+export const getTrainerById = async (req, res) => {
   const { id } = req.params;
   try {
-    // Only admin or the user themselves can view
-    if (!req.user.isAdmin && req.user.userId != id) {
+    // Only admin or the trainer themselves can view
+    if (!req.user.isAdmin && req.user.trainerId != id) {
       return res.status(403).json({ message: "Access denied." });
     }
     const result = await pool.query(
-      "SELECT id, first_name, email, status FROM users WHERE id = $1",
+      "SELECT * FROM trainers WHERE id = $1",
       [id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Trainer not found" });
     }
     res.json(result.rows[0]);
   } catch (error) {
-    console.error("Error fetching user by id:", error.message);
+    console.error("Error fetching trainer by id:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Update user (admin or self)
-export const updateUser = async (req, res) => {
+// Update trainer (admin or self)
+export const updateTrainer = async (req, res) => {
   const { id } = req.params;
-  const { name, email } = req.body;
+  const { name, email, experience, specialty } = req.body;
   try {
-    // Only admin or the user themselves can update
-    if (!req.user.isAdmin && req.user.userId != id) {
+    // Only admin or the trainer themselves can update
+    if (!req.user.isAdmin && req.user.trainerId != id) {
       return res.status(403).json({ message: "Access denied." });
     }
     const result = await pool.query(
-      "UPDATE users SET first_name = $1, email = $2 WHERE id = $3 RETURNING id, first_name, email, status",
-      [name, email, id]
+      "UPDATE trainers SET name = $1, email = $2, experience=$3, specialty=$4 WHERE id = $5 RETURNING *",
+      [name, email,  experience, specialty ,id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Trainer not found" });
     }
-    res.json({ message: "User updated", user: result.rows[0] });
+    res.json({ message: "Trainer updated", trainer: result.rows[0] });
   } catch (error) {
-    console.error("Error updating user:", error.message);
+    console.error("Error updating trainer:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Change user status (admin only)
-export const changeUserStatus = async (req, res) => {
+// Change trainer status (admin only)
+export const changeTrainerStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   try {
@@ -267,36 +252,36 @@ export const changeUserStatus = async (req, res) => {
       return res.status(403).json({ message: "Admins only." });
     }
     const result = await pool.query(
-      "UPDATE users SET status = $1 WHERE id = $2 RETURNING id, first_name, email, status",
+      "UPDATE trainers SET status = $1 WHERE id = $2 RETURNING *",
       [status, parseInt(id)]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Trainer not found" });
     }
-    res.json({ message: "Status updated", user: result.rows[0] });
+    res.json({ message: "Status updated", trainer: result.rows[0] });
   } catch (error) {
     console.error("Error changing status:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// Delete user (admin only)
-export const deleteUser = async (req, res) => {
+// Delete trainer (admin only)
+export const deleteTrainer = async (req, res) => {
   const { id } = req.params;
   try {
     if (!req.user.isAdmin) {
       return res.status(403).json({ message: "Admins only." });
     }
     const result = await pool.query(
-      "DELETE FROM users WHERE id = $1 RETURNING id",
+      "DELETE FROM trainers WHERE id = $1 RETURNING id",
       [id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Trainer not found" });
     }
-    res.json({ message: "User deleted" });
+    res.json({ message: "Trainer deleted" });
   } catch (error) {
-    console.error("Error deleting user:", error.message);
+    console.error("Error deleting trainer:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 };

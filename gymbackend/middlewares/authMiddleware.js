@@ -101,10 +101,11 @@ export const adminProtect = async (req, res, next) => {
     }
 
     // Attach admin to request object
-    req.admin = {
+    req.user = {
       id: admin.id,
       email: admin.email,
-      role: admin.role || 'admin'
+      role: admin.role || 'admin',
+      isAdmin: true
     };
 
     next();

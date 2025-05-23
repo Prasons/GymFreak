@@ -29,6 +29,7 @@ export const createWorkoutPlan = async (req, res) => {
     difficulty_level = 'beginner', 
     duration_weeks = 4, 
     target_goals = [],
+    category = '',
     is_public = true 
   } = req.body;
 
@@ -39,14 +40,15 @@ export const createWorkoutPlan = async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO workout_plans 
-       (name, description, difficulty_level, duration_weeks, target_goals, created_by, is_public)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       (name, description, difficulty_level, duration_weeks, category, target_goals, created_by, is_public)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
        RETURNING *`,
       [
         name, 
         description, 
         difficulty_level, 
         duration_weeks, 
+        category,
         target_goals, 
         req.user?.id, // Assuming user ID is attached by auth middleware
         is_public
@@ -71,6 +73,7 @@ export const updateWorkoutPlan = async (req, res) => {
     description, 
     difficulty_level, 
     duration_weeks, 
+    category,
     target_goals,
     is_public 
   } = req.body;
@@ -86,16 +89,18 @@ export const updateWorkoutPlan = async (req, res) => {
            description = $2, 
            difficulty_level = COALESCE($3, difficulty_level),
            duration_weeks = COALESCE($4, duration_weeks),
-           target_goals = COALESCE($5, target_goals),
-           is_public = COALESCE($6, is_public),
+           category = $5,
+           target_goals = COALESCE($6, target_goals),
+           is_public = COALESCE($7, is_public),
            updated_at = NOW()
-       WHERE id = $7 
+       WHERE id = $8 
        RETURNING *`,
       [
         name, 
         description, 
         difficulty_level,
         duration_weeks,
+        category,
         target_goals,
         is_public,
         id
@@ -126,7 +131,7 @@ export const deleteWorkoutPlan = async (req, res) => {
     
     // First, delete related workout plan exercises
     await pool.query(
-      'DELETE FROM workout_plan_exercises WHERE workout_plan_id = $1',
+      'DELETE FROM workout_plan_exercises WHERE workoutplan_id = $1',
       [id]
     );
     
@@ -167,17 +172,17 @@ export const getUserWorkoutPlan = async (req, res) => {
   try {
     // First, get the user's selected workout plan IDs
     const userPlansResult = await pool.query(
-      `SELECT workout_plan_id 
-       FROM user_workout_plans 
+      `SELECT workoutplan_id 
+       FROM user_workoutplans 
        WHERE user_id = $1`,
-      [userId]
+      [parseInt(userId)]
     );
     
     if (userPlansResult.rows.length === 0) {
       return res.json([]);
     }
     
-    const planIds = userPlansResult.rows.map(row => row.workout_plan_id);
+    const planIds = userPlansResult.rows.map(row => row.workoutplan_id);
     
     // Then get the full details of each workout plan
     const result = await pool.query(
@@ -245,16 +250,18 @@ export const setUserWorkoutPlan = async (req, res) => {
     
     // Remove all existing plans for this user
     await client.query(
-      'DELETE FROM user_workout_plans WHERE user_id = $1', 
+      'DELETE FROM user_workoutplans WHERE user_id = $1', 
       [userId]
     );
     
     // Add the new selections if any
     if (planIds.length > 0) {
-      const values = planIds.map(planId => `(${userId}, ${planId})`).join(',');
-      await client.query(
-        `INSERT INTO user_workout_plans (user_id, workout_plan_id) VALUES ${values}`
-      );
+      for (const planId of planIds) {
+        await client.query(
+          `INSERT INTO user_workoutplans (user_id, workoutplan_id) VALUES ($1, $2)`,
+          [parseInt(userId), parseInt(planId)]
+    );
+  }
     }
     
     await client.query('COMMIT');
@@ -263,7 +270,7 @@ export const setUserWorkoutPlan = async (req, res) => {
     const result = await pool.query(
       `SELECT wp.* 
        FROM workout_plans wp
-       JOIN user_workout_plans uwp ON wp.id = uwp.workout_plan_id
+       JOIN user_workoutplans uwp ON wp.id = uwp.workoutplan_id
        WHERE uwp.user_id = $1`,
       [userId]
     );
@@ -310,7 +317,7 @@ export const unsetUserWorkoutPlan = async (req, res) => {
     
     // Remove all workout plans for this user
     const result = await client.query(
-      'DELETE FROM user_workout_plans WHERE user_id = $1 RETURNING *',
+      'DELETE FROM user_workoutplans WHERE user_id = $1 RETURNING *',
       [userId]
     );
     
@@ -369,8 +376,8 @@ export const removeUserWorkoutPlan = async (req, res) => {
     
     // Remove the specific workout plan for the user
     const result = await client.query(
-      `DELETE FROM user_workout_plans 
-       WHERE user_id = $1 AND workout_plan_id = $2 
+      `DELETE FROM user_workoutplans 
+       WHERE user_id = $1 AND workoutplan_id = $2 
        RETURNING *`,
       [userId, planId]
     );

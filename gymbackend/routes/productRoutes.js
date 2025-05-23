@@ -1,5 +1,7 @@
 import express from "express";
 import multer from "multer";
+import path from 'path';
+import fs from 'fs';
 import { adminProtect } from "../middlewares/authMiddleware.js";
 import {
   addProduct,
@@ -12,7 +14,13 @@ const router = express.Router();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/"); // Save files to the 'uploads' directory
+    const uploadDir = path.join(process.env.FILEPATH, 'uploads');
+    fs.mkdir(uploadDir, { recursive: true }, (err) => {
+        if (err) {
+            return cb(err);
+        }
+        cb(null, uploadDir); // Store uploaded files in 'SoundtrackFiles' directory
+    });
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
@@ -60,6 +68,10 @@ router.post("/",
           error: err.message
         });
       }
+      if (!req.file) {
+        return res.status(400).send({ message: 'No file uploaded' });
+      }
+      let i= req.body;
       // Everything went fine
       next();
     });

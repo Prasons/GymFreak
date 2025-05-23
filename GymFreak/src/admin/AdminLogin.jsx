@@ -1,6 +1,9 @@
 import React, { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import axiosInstance from '../api/axiosInstance';
 import { toast } from "react-toastify";
+import { saveTokens, isAuthenticated, isAdmin, clearAuthData } from '../utils/auth';
+
 import {
   Box,
   Button,
@@ -23,43 +26,8 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/material/styles";
 
-// Mock admin credentials for demo
-const MOCK_ADMIN = {
-  email: "admin@example.com",
-  password: "password123"
-};
 
-const saveAuthData = () => {
-  // Mock token expiration in 1 hour
-  const expiresIn = 60 * 60 * 1000;
-  const expirationTime = new Date().getTime() + expiresIn;
-  
-  localStorage.setItem("adminToken", "mock-jwt-token");
-  localStorage.setItem("adminInfo", JSON.stringify({
-    id: 1,
-    name: "Admin User",
-    email: MOCK_ADMIN.email,
-    role: "admin"
-  }));
-  localStorage.setItem("tokenExpiration", expirationTime.toString());
-};
 
-const clearAuthData = () => {
-  localStorage.removeItem("adminToken");
-  localStorage.removeItem("adminInfo");
-  localStorage.removeItem("tokenExpiration");
-};
-
-const isAuthenticated = () => {
-  const token = localStorage.getItem("adminToken");
-  const expiration = localStorage.getItem("tokenExpiration");
-  return token && expiration && new Date().getTime() < parseInt(expiration);
-};
-
-const isAdmin = () => {
-  const adminInfo = localStorage.getItem("adminInfo");
-  return adminInfo && JSON.parse(adminInfo).role === "admin";
-};
 
 const StyledPaper = styled(Paper)(({ theme }) => ({
   marginTop: theme.spacing(8),
@@ -129,47 +97,80 @@ const AdminLogin = () => {
     }
   }, [location]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
+    setError('');
+    
     // Basic validation
     if (!formData.email || !formData.password) {
-      setError("Please enter both email and password");
+      setError('Please enter both email and password');
       return;
     }
-
+    
     setIsLoading(true);
-
-    // Simulate API call delay
-    setTimeout(() => {
-      try {
-        // Check credentials against mock data
-        if (formData.email === MOCK_ADMIN.email && formData.password === MOCK_ADMIN.password) {
-          // Save auth data to localStorage
-          saveAuthData();
-          
-          // Show success message
-          toast.success("Login successful!");
-          
-          // Redirect to dashboard
-          const from = location.state?.from?.pathname || "/admin/dashboard";
-          navigate(from, { replace: true });
-          
-          // Notify other components
-          window.dispatchEvent(new Event("adminLogin"));
-        } else {
-          throw new Error("Invalid email or password");
-        }
-      } catch (error) {
-        console.error("Login error:", error);
-        const errorMessage = error.message || "Login failed. Please try again.";
-        setError(errorMessage);
-        toast.error(errorMessage);
-      } finally {
-        setIsLoading(false);
+    
+    try {
+      console.log('Sending login request...');
+      const response = await axiosInstance.post('/admin/login', {
+        email: formData.email.trim(),
+        password: formData.password
+      });
+      
+      console.log('Login response:', response.data);
+      
+      if (!response.data) {
+        throw new Error('No data in response');
       }
-    }, 800); // Simulate network delay
+      
+      const { accessToken, refreshToken, admin } = response.data;
+      
+      if (!accessToken) {
+        console.error('No access token in response:', response.data);
+        throw new Error('No authentication token received');
+      }
+      
+      // Save tokens and admin data
+      saveTokens({
+        accessToken,
+        refreshToken,
+        isAdmin: true,
+        adminToken: accessToken // Explicitly set adminToken
+      });
+      
+      // Store admin info and set admin flag
+      localStorage.setItem('adminInfo', JSON.stringify(admin));
+      localStorage.setItem('adminAuth', 'true');
+      
+      // Set default authorization header for future requests
+      axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+      
+      // Show success message
+      toast.success('Login successful!');
+      
+      // Redirect to the intended page or dashboard
+      const from = location.state?.from?.pathname || '/admin/dashboard';
+      navigate(from, { replace: true });
+      
+      // Notify other components about the login
+      window.dispatchEvent(new Event('adminLogin'));
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      let errorMessage = 'Login failed. Please try again.';
+      
+      if (error.response) {
+        // Server responded with an error status code
+        errorMessage = error.response.data?.message || error.response.statusText || errorMessage;
+      } else if (error.request) {
+        // Request was made but no response received
+        errorMessage = 'No response from server. Please check your connection.';
+      }
+      
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const togglePasswordVisibility = () => {
@@ -302,19 +303,21 @@ const AdminLogin = () => {
             </SubmitButton>
 
             <Box sx={{ textAlign: "center", mt: 2 }}>
-              <MuiLink
-                component={Link}
+              <Link
                 to="/"
-                variant="body2"
-                sx={{
-                  color: "text.secondary",
-                  "&:hover": {
-                    color: "primary.main",
+                style={{
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  '&:hover': {
+                    color: 'primary.main',
                   },
                 }}
               >
                 ← Back to Home
-              </MuiLink>
+              </Link>
             </Box>
           </Form>
         </Box>

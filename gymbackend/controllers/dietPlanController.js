@@ -65,7 +65,7 @@ export const getUserDietPlan = async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT dp.* FROM diet_plans dp 
-       JOIN user_diet_plans udp ON dp.id = udp.diet_plan_id 
+       JOIN user_dietplans udp ON dp.id = udp.dietplan_id 
        WHERE udp.user_id = $1`,
       [req.user.id]
     );
@@ -91,12 +91,12 @@ export const setUserDietPlan = async (req, res) => {
     await client.query('BEGIN');
     
     // Remove existing diet plans for the user
-    await client.query('DELETE FROM user_diet_plans WHERE user_id = $1', [req.user.id]);
+    await client.query('DELETE FROM user_dietplans WHERE user_id = $1', [req.user.id]);
     
     // Insert new diet plans
     for (const planId of dietPlanIds) {
       await client.query(
-        'INSERT INTO user_diet_plans (user_id, diet_plan_id) VALUES ($1, $2)',
+        'INSERT INTO user_dietplans (user_id, diet_plan_id) VALUES ($1, $2)',
         [req.user.id, planId]
       );
     }
@@ -116,7 +116,7 @@ export const setUserDietPlan = async (req, res) => {
 export const unsetUserDietPlan = async (req, res) => {
   try {
     const userId = req.user.userId;
-    await pool.query("DELETE FROM user_diet_plans WHERE user_id = $1", [userId]);
+    await pool.query("DELETE FROM user_dietplans WHERE user_id = $1", [userId]);
     res.json({ message: "All user diet plans removed" });
   } catch (err) {
     console.error("Error unsetting user diet plans:", err);
@@ -141,7 +141,7 @@ export const removeUserDietPlan = async (req, res) => {
     }
     
     const result = await pool.query(
-      'DELETE FROM user_diet_plans WHERE user_id = $1 AND diet_plan_id = $2 RETURNING *',
+      'DELETE FROM user_dietplans WHERE user_id = $1 AND dietplan_id = $2 RETURNING *',
       [req.user.id, planId]
     );
     
