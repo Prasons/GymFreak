@@ -69,6 +69,25 @@ export const createProduct = async (productData) => {
   }
 };
 
+export const updateProduct = async (productData,id,image) => {
+  try {
+    if (!isAdmin()) {
+      throw new Error('Unauthorized: Admin access required');
+    }
+const headers = image? {
+        'Content-Type': 'multipart/form-data',
+      }:{'Content-Type': 'application/json'}
+    const response = await api.put(BASE_URL+'/'+id+"?hasimage="+image, productData, {
+      headers
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating product:', error);
+    handleApiError(error);
+    throw error;
+  }
+};
+
 export const deleteProduct = async (id) => {
   try {
     if (!isAdmin()) {

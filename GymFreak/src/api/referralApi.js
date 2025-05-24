@@ -1,7 +1,7 @@
 import axios from "axios";
 import { getAccessToken, getAdminToken } from "../utils/auth";
 
-const BASE_URL = "http://localhost:8080/api/referral";
+const BASE_URL = "http://localhost:8080/api/referrals";
 
 export const getMyReferralCode = async () => {
   const token = getAccessToken();

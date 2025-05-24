@@ -1,6 +1,6 @@
 import axios from '../api/axiosInstance';
 
-const API_URL = '/membership-plans';  // Relative URL since baseURL is already set in axiosInstance
+const API_URL = 'http://localhost:8080/api/membership-plans';  // Relative URL since baseURL is already set in axiosInstance
 
 // Get all membership plans
 export const getMembershipPlans = async (activeOnly = true) => {

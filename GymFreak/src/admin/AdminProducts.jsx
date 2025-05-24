@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { getProducts, createProduct, deleteProduct } from '../api/productApi';
+import { getProducts, createProduct, deleteProduct,updateProduct } from '../api/productApi';
 import { toast } from "react-toastify";
 import {
   FiTrash2,
@@ -148,54 +148,58 @@ const AdminProducts = () => {
       toast.error("Please fill in all required fields");
       return;
     }
-    
+    console.log(productData)
     // Ensure stock_quantity is a number
     const stockQuantity = parseInt(productData.stock_quantity, 10) || 0;
 
-    if (!newProduct.image) {
+    if (!productData.image && !productData.image_url) {
       setError('Please select an image');
       toast.error('Please select an image');
       return;
     }
 
     const formData = new FormData();
-    formData.append('name', newProduct.name);
-    formData.append('description', newProduct.description || '');
-    formData.append('price', newProduct.price);
-    formData.append('category', newProduct.category);
-    formData.append('stock_quantity', '10');
-    formData.append('image', newProduct.image);
+    
 
-    const toastId = toast.loading('Adding product...');
+    // const toastId = toast.loading('Adding product...');
     try {
       setIsSubmitting(true);
       const isEditing = !!editingProduct;
       const toastId = toast.loading(isEditing ? "Updating product..." : "Adding product...");
 
       if (isEditing) {
-        // Update existing product
-        const index = mockProducts.findIndex(p => p.id === editingProduct.id);
-        if (index > -1) {
-          mockProducts[index] = { 
-            ...editingProduct,
-            price: parseFloat(editingProduct.price),
-            stock_quantity: stockQuantity
-          };
+        if (productData.image){
+          formData.append('name', productData.name);
+          formData.append('description', productData.description || '');
+          formData.append('price', productData.price);
+          formData.append('category', productData.category);
+          formData.append('stock_quantity', '10');
+          formData.append('image', productData.image);
         }
+        // Update existing product
+       const res = await updateProduct(productData.image?formData:productData,productData.id,productData.image?true:false)
+       if(res){
+         const data = await getProducts()
+         setProducts(data);
+
+       } 
       } else {
+        formData.append('name', productData.name);
+        formData.append('description', productData.description || '');
+        formData.append('price', productData.price);
+        formData.append('category', productData.category);
+        formData.append('stock_quantity', '10');
+        formData.append('image', productData.image);
         // Add new product
-        const newProductData = {
-          ...productData,
-          id: Math.max(0, ...mockProducts.map(p => p.id)) + 1,
-          price: parseFloat(productData.price),
-          stock_quantity: stockQuantity,
-          image: 'https://via.placeholder.com/150'
-        };
-        mockProducts.push(newProductData);
+       const res= await createProduct(formData);
+       if(res){
+         const data = await getProducts()
+         setProducts(data);
+
+       } 
       }
 
       // Update state
-      setProducts([...mockProducts]);
 
       // Reset form and editing state
       setNewProduct({
@@ -216,8 +220,9 @@ const AdminProducts = () => {
         render: isEditing ? "Product updated successfully!" : "Product added successfully!",
         type: "success",
         isLoading: false,
-        autoClose: 3000,
+        autoClose: 2000,
       });
+      setShowAddModal(false)
     } catch (error) {
       console.error('Error adding product:', error);
       const errorMessage = error.response?.data?.message || 'Failed to add product. Please try again.';

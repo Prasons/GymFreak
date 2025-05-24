@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { FaShoppingCart, FaSearch } from "react-icons/fa";
-
+import { getProducts, } from '../api/productApi';
 const dummyProducts = [
   {
     id: "eq1",
@@ -157,17 +157,37 @@ const GymEquipmentPage = () => {
   const navigate = useNavigate();
   const { addToCart, cartItems, getCartCount } = useCart();
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+    const [error, setError] = useState(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setProducts(dummyProducts);
-      setLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+     const fetchProducts = async () => {
+       setLoading(true);
+       setError(null);
+ 
+       try {
+         const data = await getProducts();
+         setProducts(data);
+         setCategories([
+    "All",
+    ...new Set(data.map((item) => item.category)),
+  ]);
+         setError(null);
+       } catch (err) {
+         console.error("Failed to fetch products", err);
+         setProducts(dummyProducts); // Fallback to mock data
+         setError("Using mock data for development");
+         toast.info("Using mock data for development");
+       } finally {
+         setLoading(false);
+       }
+     };
+ 
+     fetchProducts();
+   }, []);
 
   const handleAddToCart = (item) => {
     if (item.stock <= 0) return;
@@ -191,10 +211,7 @@ const GymEquipmentPage = () => {
     navigate('/shoppingcart');
   };
 
-  const categories = [
-    "All",
-    ...new Set(dummyProducts.map((item) => item.category)),
-  ];
+  
 
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === "All" || product.category === selectedCategory;
@@ -273,7 +290,7 @@ const GymEquipmentPage = () => {
             >
               <div className="relative pt-[100%]">
                 <img
-                  src={item.image}
+                  src={`http://localhost:8080${item.image_url}`}
                   alt={item.name}
                   className="absolute top-0 left-0 w-full h-full object-cover rounded-t-xl"
                 />
@@ -293,23 +310,13 @@ const GymEquipmentPage = () => {
                     item.stock > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
                     'bg-red-500/20 text-red-400'
                   }`}>
-                    {item.stock > 10 ? `In Stock (${item.stock})` : 
-                     item.stock > 0 ? `Low Stock (${item.stock} left)` : 'Out of Stock'}
+                    {item.stock_quantity > 5 ? `In Stock (${item.stock_quantity})` : 
+                     item.stock_quantity > 0 ? `Low Stock (${item.stock_quantity} left)` : 'Out of Stock'}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="flex items-center text-yellow-400">
-                      {"★".repeat(Math.floor(item.rating))}
-                      {"☆".repeat(5 - Math.floor(item.rating))}
-                    </div>
-                    <span className="ml-2 text-sm text-gray-400">
-                      ({item.reviews})
-                    </span>
-                  </div>
-                </div>
+                
               </div>
-              {item.stock > 0 ? (
+              {item.stock_quantity > 0 ? (
                 <button
                   onClick={() => handleAddToCart(item)}
                   className="w-full py-3 bg-emerald-600 text-white rounded-b-xl hover:bg-emerald-700 transition-colors flex items-center justify-center gap-2"

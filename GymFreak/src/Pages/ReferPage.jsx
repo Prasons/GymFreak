@@ -14,7 +14,7 @@ const ReferPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-primary text-light p-8">
+    <div className="min-h-screen bg-primary p-8">
       <h1 className="text-4xl font-bold text-center mb-8">Refer a Friend</h1>
 
       <div className="max-w-3xl mx-auto bg-secondary p-6 rounded-md">
@@ -22,8 +22,8 @@ const ReferPage = () => {
         <div className="text-center mb-8">
           <h2 className="text-2xl font-semibold mb-4">Your Referral Code</h2>
           {referralCode ? (
-            <div className="bg-accent text-light py-3 px-6 rounded-md inline-block font-bold text-lg">
-              {referralCode}
+            <div style={{color:"black"}} className="bg-accent text-black py-3 px-6 rounded-md inline-block font-bold text-lg">
+              {referralCode}asasasasasa
             </div>
           ) : (
             <button

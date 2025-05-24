@@ -1,66 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaDumbbell, FaCheck, FaCrown, FaBolt } from 'react-icons/fa';
 import { toast } from 'react-toastify';
+import { getMembershipPlans } from "../services/membershipPlanService";
 
-const membershipPlans = [
-  {
-    id: 1,
-    name: 'Basic Plan',
-    price: 1500,
-    duration_days: 30,
-    icon: <FaDumbbell className="text-4xl text-emerald-500" />,
-    features: [
-      'Access to gym equipment',
-      'Basic workout plans',
-      'Locker room access',
-      'Water dispenser',
-      'Free WiFi'
-    ],
-    is_popular: false,
-    color: 'emerald'
-  },
-  {
-    id: 2,
-    name: 'Premium Plan',
-    price: 4000,
-    duration_days: 90,
-    icon: <FaCrown className="text-4xl text-amber-500" />,
-    features: [
-      'All Basic Plan features',
-      'Personal trainer (2 sessions/week)',
-      'Nutrition consultation',
-      'Access to group classes',
-      'Towel service',
-      'Protein shake (1/day)',
-      'Progress tracking'
-    ],
-    is_popular: true,
-    color: 'amber'
-  },
-  {
-    id: 3,
-    name: 'Elite Plan',
-    price: 7000,
-    duration_days: 180,
-    icon: <FaBolt className="text-4xl text-purple-500" />,
-    features: [
-      'All Premium Plan features',
-      'Unlimited personal training',
-      'Custom diet plan',
-      'Massage therapy (1/month)',
-      'Sauna access',
-      'Guest passes (2/month)',
-      'Premium gym merchandise',
-      'Priority class booking'
-    ],
-    is_popular: false,
-    color: 'purple'
-  }
-];
+
+
+
+
+
 
 const MembershipPage = () => {
+  const fetchPlans = async () => {
+    try {
+      const response = await getMembershipPlans();
+      // Access the data property from the response
+      const responseData = response.data || {};
+      // Check if the data is an array or has a data property that's an array
+      const plans = Array.isArray(responseData) 
+        ? responseData 
+        : (Array.isArray(responseData.data) ? responseData.data : []);
+      
+      console.log('Fetched diet plans:', plans);
+      setMembershipPlans(plans);
+    } catch (err) {
+      console.error('Error fetching diet plans:', err);
+      setMembershipPlans([]);
+    } finally {
+    }
+  };
+  useEffect(() => {
+    fetchPlans();
+  }, []);
   const [selectedPlan, setSelectedPlan] = useState(null);
-
+const [membershipPlans, setMembershipPlans] = useState([]); 
   const handleSubscribe = (planId) => {
     setSelectedPlan(planId);
     const plan = membershipPlans.find(p => p.id === planId);

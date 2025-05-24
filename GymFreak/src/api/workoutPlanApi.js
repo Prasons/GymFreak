@@ -59,6 +59,15 @@ export const removeUserWorkoutPlan = async (userId, planId) => {
   return res.data;
 };
 
+export const removeAllUserWorkoutPlan = async (userId) => {
+  const token = getAccessToken();
+  const res = await axios.delete(
+    `${BASE_URL}/user/${userId}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  return res.data;
+};
+
 export const unsetUserWorkoutPlan = async (userId) => {
   const token = getAccessToken();
   const res = await axios.delete(`${BASE_URL}/user/${userId}`, {

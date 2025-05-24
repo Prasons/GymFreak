@@ -224,7 +224,6 @@ const AdminTrainers = () => {
                 <th className="py-4 px-6 text-left">Specialty</th>
                 <th className="py-4 px-6 text-left">Experience</th>
                 <th className="py-4 px-6 text-left">Status</th>
-                <th className="py-4 px-6 text-left">Join Date</th>
                 <th className="py-4 px-6 text-left">Actions</th>
               </tr>
             </thead>
@@ -290,7 +289,6 @@ const AdminTrainers = () => {
                       {trainer.status}
                     </span>
                   </td>
-                  <td className="py-4 px-6">{trainer.joinDate}</td>
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2">
                       {editId === trainer.id ? (

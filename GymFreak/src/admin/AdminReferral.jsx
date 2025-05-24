@@ -1,22 +1,39 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { getAllReferrals, markRewardGiven } from "../api/referralApi";
 
 const AdminReferral = () => {
-  const referrals = [
-    {
-      id: 1,
-      user: "John Doe",
-      code: "A1B2C3D4",
-      referredCount: 3,
-      reward: "$15",
-    },
-    {
-      id: 2,
-      user: "Jane Smith",
-      code: "Z9Y8X7W6",
-      referredCount: 1,
-      reward: "$5",
-    },
-  ];
+
+  const [referrals, setReferrals] = useState([]);
+    const [loading, setLoading] = useState(true);
+      const [error, setError] = useState("");
+
+   useEffect(() => {
+      fetchReferrals();
+    }, []);
+  
+    const fetchReferrals = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const data = await getAllReferrals();
+        setReferrals(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching referrals:", err);
+        setError("Failed to load referrals. Please try again later.");
+        toast.error("Failed to load referrals");
+      } finally {
+        setLoading(false);
+      }
+    };
+      if (loading) return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white"></div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="p-4 bg-red-500/10 text-red-500 rounded-lg">{error}</div>
+  );
 
   return (
     <div className="p-8 bg-primary min-h-screen text-light">
@@ -37,10 +54,10 @@ const AdminReferral = () => {
           <tbody>
             {referrals.map((ref) => (
               <tr key={ref.id} className="border-t">
-                <td className="p-2">{ref.user}</td>
-                <td className="p-2">{ref.code}</td>
-                <td className="p-2">{ref.referredCount}</td>
-                <td className="p-2">{ref.reward}</td>
+                <td className="p-2">{ref.referrer_email}</td>
+                <td className="p-2">{ref.referral_code}</td>
+                <td className="p-2">{ref.total_referred}</td>
+                <td className="p-2">${ref.total_referred*5}</td>
               </tr>
             ))}
           </tbody>

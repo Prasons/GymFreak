@@ -3,45 +3,7 @@ import { FaEdit, FaTrash, FaCheck, FaBan, FaUserPlus, FaTimes, FaEnvelope } from
 import { toast } from "react-toastify";
 import { getAllUsers, deleteUser, updateUser, changeUserStatus } from "../api/userApi";
 
-// Mock data for development
-const mockMembers = [
-  { 
-    id: 1, 
-    name: "John Doe", 
-    email: "john@example.com", 
-    status: "Active",
-    joinDate: "2023-01-15",
-    membershipType: "Premium",
-    lastActive: "2023-05-20",
-    phone: "+1 234-567-8900",
-    age: 28,
-    gender: "Male",
-    address: "123 Gym Street, Fitness City",
-    emergencyContact: "Jane Doe (Wife) - +1 234-567-8901",
-    medicalConditions: "None",
-    trainer: "Mike Johnson",
-    paymentStatus: "Paid",
-    nextPaymentDue: "2023-06-15"
-  },
-  { 
-    id: 2, 
-    name: "Jane Smith", 
-    email: "jane@example.com", 
-    status: "Inactive",
-    joinDate: "2023-02-20",
-    membershipType: "Basic",
-    lastActive: "2023-04-15",
-    phone: "+1 234-567-8902",
-    age: 32,
-    gender: "Female",
-    address: "456 Health Ave, Fitness City",
-    emergencyContact: "John Smith (Husband) - +1 234-567-8903",
-    medicalConditions: "Asthma",
-    trainer: "Sarah Wilson",
-    paymentStatus: "Due",
-    nextPaymentDue: "2023-05-20"
-  }
-];
+
 
 // Mock API functions
 const mockApi = {
@@ -222,15 +184,11 @@ const AdminMembers = () => {
                         className="w-full bg-gray-700 text-white rounded px-2 py-1"
                       />
                     ) : (
-                      <button
-                        onClick={() => {
-                          setSelectedMember(member);
-                          setShowProfileModal(true);
-                        }}
-                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                      <p
+                        className="text-white"
                       >
                         {member.name}
-                      </button>
+                      </p>
                     )}
                   </td>
                   <td className="py-4 px-6">

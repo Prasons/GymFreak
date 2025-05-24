@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FaCreditCard,
   FaUserFriends,
@@ -31,11 +31,14 @@ import ShoppingCartPage from "./ShoppingCartPage";
 import NutritionSearch from "./NutritionSearch";
 import GymEquipmentPage from "./GymEquipmentPage";
 import PaymentPage from "./PaymentPage";
-
 const Dashboard = () => {
+  const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const defaultTab = queryParams.get('redirect') || 'profile';
   const navigate = useNavigate();
   const [isSidebarOpen, setSidebarOpen] = useState(true);
-  const [activeView, setActiveView] = useState('profile');
+  const [activeView, setActiveView] = useState(defaultTab);
+  
 
   // Dummy user data - replace with actual user data
   const user = {
@@ -46,8 +49,8 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    // Add logout logic here
-    console.log("Logging out...");
+    localStorage.clear();
+    navigate("/home");
   };
 
   const toggleSidebar = () => {
@@ -80,18 +83,6 @@ const Dashboard = () => {
       component: <DietPlan /> 
     },
     { 
-      id: 'schedule', 
-      name: 'Training Schedule', 
-      icon: <FaCalendarAlt />, 
-      component: <TrainingSchedule /> 
-    },
-    { 
-      id: 'progress', 
-      name: 'Progress', 
-      icon: <FaChartLine />, 
-      component: <Progress /> 
-    },
-    { 
       id: 'referral', 
       name: 'Referral Program', 
       icon: <FaUserFriends />, 
@@ -121,15 +112,7 @@ const Dashboard = () => {
       icon: <FaUtensils />, 
       component: <NutritionSearch /> 
     },
-    { 
-      id: 'settings', 
-      name: 'Settings', 
-      icon: <FaCog />, 
-      component: <div className="p-6">
-        <h2 className="text-2xl font-bold mb-4">Settings</h2>
-        <p className="text-neutral">Settings page coming soon...</p>
-      </div> 
-    },
+    
   ];
 
   return (
@@ -174,13 +157,16 @@ const Dashboard = () => {
           ))}
 
           {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors mt-8"
-          >
-            <FaSignOutAlt className="text-xl" />
-            <span>Logout</span>
-          </button>
+           <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center p-3 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-all duration-300 transform hover:-translate-y-0.5 shadow-lg hover:shadow-red-500/30"
+                    >
+                      <FaSignOutAlt className="text-xl" />
+                      <span className={`${!isSidebarOpen && "hidden"} ml-3 font-medium`}>
+                        Logout
+                      </span>
+                    </button>
         </nav>
         </div>
       </div>

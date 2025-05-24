@@ -3,6 +3,7 @@ import { registerUser } from "../api/userApi";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import IconButton from "@mui/material/IconButton";
 import { TextField } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -11,7 +12,7 @@ const SignUp = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [referralCode, setReferralCode] = useState("");
-
+const navigate = useNavigate();
   const handleSignUp = async (e) => {
     e.preventDefault();
     try {
@@ -26,6 +27,7 @@ const SignUp = () => {
       setEmail("");
       setPassword("");
       setReferralCode("");
+      navigate('/login')
     } catch (error) {
       console.error("Sign up failed:", error);
       if (

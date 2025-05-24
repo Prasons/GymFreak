@@ -1,22 +1,69 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { FaTrash, FaMinus, FaPlus, FaArrowLeft, FaExclamationTriangle } from "react-icons/fa";
 import { toast } from "react-toastify";
+import { addToCart,epayment } from "../api/cartApi";
+import axios from "axios";
 
 const ShoppingCartPage = () => {
   const navigate = useNavigate();
-  const { cartItems, removeFromCart, updateQuantity, getCartTotal } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, getCartTotal, clearCart } = useCart();
+ const location = useLocation();
+const queryParams = new URLSearchParams(location.search);
+const defaultTab = queryParams.get('redirect')||'';
+ useEffect(()=>{
+  if (defaultTab === 'cart'){
+     localStorage.removeItem("cartItems");
+      clearCart();
+  }
 
-  const handleCheckout = () => {
-    navigate('/dashboard', { state: { activeView: 'payment' } });
+},[])
+  const handleCheckout = async() => {
+    try{
+      let userInfo = JSON.parse(localStorage.userInfo);
+      let totalCost = (getCartTotal().toFixed(2)*100).toString();
+
+      let data={
+        name: userInfo.first_name,
+        email: userInfo.email,
+        amount: totalCost
+      }    
+
+      let response = await epayment(data);
+      if(response){
+        localStorage.removeItem('cart');
+        clearCart();
+        let url = response.payment_url;
+        window.open(url, '_blank');
+      }
+      console.log(response);
+
+    
+          
+
+      // const res = await addToCart(cartItems);
+      // if(res){
+      //   
+      // }
+     } catch (error) {
+        console.error("order failed:", error);
+        console.log("Error response:", error.response?.data);
+     }
+    
   };
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center">
-        <h2 className="text-3xl font-bold mb-4">Your Cart is Empty</h2>
-        <p className="mb-8">Add some items to your cart to get started!</p>
+            <div className="min-h-screen bg-black text-white p-8 flex flex-col items-center justify-center">
+        <h2 className="text-3xl font-bold mb-4">
+          {defaultTab ? 'Thank you! Your order has been placed.' : 'Your cart is empty.'}
+        </h2>
+        <p className="mb-8">
+          {defaultTab
+            ? 'Your order will be delivered within 2–3 business days.'
+            : 'Add some items to your cart to get started!'}
+        </p>
         <button
           onClick={() => navigate('/gymequipment')}
           className="px-6 py-3 bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
@@ -47,7 +94,7 @@ const ShoppingCartPage = () => {
               className="bg-zinc-900 rounded-lg p-6 flex flex-col md:flex-row items-center gap-6"
             >
               <img
-                src={item.image}
+                src={`http://localhost:8080${item.image_url}`}
                 alt={item.name}
                 className="w-32 h-32 object-cover rounded-md"
               />
@@ -55,18 +102,18 @@ const ShoppingCartPage = () => {
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="text-xl font-semibold">{item.name}</h3>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    item.stock > 5 ? 'bg-green-500/20 text-green-400' : 
-                    item.stock > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
+                    item.stock_quantity > 5 ? 'bg-green-500/20 text-green-400' : 
+                    item.stock_quantity > 0 ? 'bg-yellow-500/20 text-yellow-400' : 
                     'bg-red-500/20 text-red-400'
                   }`}>
-                    {item.stock > 5 ? 'In Stock' : item.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                    {item.stock_quantity > 5 ? 'In Stock' : item.stock_quantity > 0 ? 'Low Stock' : 'Out of Stock'}
                   </span>
                 </div>
                 <p className="text-gray-400 mb-2">{item.description}</p>
-                {item.stock !== undefined && item.quantity > item.stock && (
+                {item.stock_quantity !== undefined && item.quantity > item.stock_quantity && (
                   <div className="flex items-center text-yellow-400 text-sm mb-2">
                     <FaExclamationTriangle className="mr-1" />
-                    Only {item.stock} available (reduced from {item.quantity})
+                    Only {item.stock_quantity} available (reduced from {item.quantity})
                   </div>
                 )}
                 <div className="flex items-center justify-between">
@@ -78,15 +125,15 @@ const ShoppingCartPage = () => {
                       <FaMinus />
                     </button>
                     <span className={`text-xl font-medium w-8 text-center ${
-                      item.stock !== undefined && item.quantity > item.stock ? 'text-yellow-400' : ''
+                      item.stock_quantity !== undefined && item.quantity > item.stock_quantity ? 'text-yellow-400' : ''
                     }`}>
-                      {item.stock !== undefined && item.quantity > item.stock ? item.stock : item.quantity}
+                      {item.stock_quantity !== undefined && item.quantity > item.stock_quantity ? item.stock_quantity : item.quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                      disabled={item.stock !== undefined && item.quantity >= item.stock}
+                      disabled={item.stock_quantity !== undefined && item.quantity >= item.stock_quantity}
                       className={`p-2 rounded-full transition-colors ${
-                        item.stock !== undefined && item.quantity >= item.stock
+                        item.stock_quantity !== undefined && item.quantity >= item.stock_quantity
                           ? 'bg-zinc-800 text-zinc-600 cursor-not-allowed'
                           : 'bg-zinc-800 hover:bg-zinc-700'
                       }`}

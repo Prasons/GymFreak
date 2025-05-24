@@ -35,7 +35,7 @@ const ReferralDashboard = () => {
       <div className="mb-8 bg-white rounded-lg shadow p-6 text-center">
         <div className="mb-3 font-semibold text-lg text-gray-700">Your Referral Code:</div>
         <div className="mb-4 flex items-center justify-center gap-2">
-          <span className="text-xl font-mono px-4 py-2 bg-gray-100 rounded border border-accent">{referralCode}</span>
+          <span className="text-xl text-black font-mono px-4 py-2 bg-gray-100 rounded border border-accent">{referralCode}</span>
           <button
             onClick={handleCopy}
             className="bg-accent text-white px-3 py-1 rounded hover:bg-primary transition"
@@ -62,7 +62,7 @@ const ReferralDashboard = () => {
           </thead>
           <tbody>
             {referrals.map((ref) => (
-              <tr key={ref.id} className="border-b last:border-b-0">
+              <tr key={ref.id} className="border-b last:border-b-0 text-black">
                 <td className="py-2 px-3">{ref.referred_email_actual || ref.referred_email}</td>
                 <td className="py-2 px-3 capitalize">{ref.status}</td>
                 <td className="py-2 px-3">{ref.reward_given ? "Given" : "Pending"}</td>

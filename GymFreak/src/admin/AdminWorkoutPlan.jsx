@@ -1,69 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-
+import { FiEdit, FiTrash2, FiCheck, FiInfo } from "react-icons/fi";
+import { getWorkoutPlans,updateWorkoutPlan,deleteWorkoutPlan,createWorkoutPlan } from "../api/workoutPlanApi";
 // Mock data for workout plans
-let mockWorkoutPlans = [
-  {
-    id: 1,
-    name: "Beginner Full Body",
-    description: "A full body workout plan for beginners",
-    difficulty_level: "beginner",
-    duration_weeks: 4,
-    target_goals: ["General Fitness", "Weight Loss"],
-    is_public: true
-  },
-  {
-    id: 2,
-    name: "Advanced Strength",
-    description: "Advanced strength training program",
-    difficulty_level: "advanced",
-    duration_weeks: 8,
-    target_goals: ["Strength", "Muscle Gain"],
-    is_public: true
-  }
-];
+
 
 // Mock API functions
-const getWorkoutPlans = async () => {
-  return new Promise(resolve => {
-    setTimeout(() => resolve([...mockWorkoutPlans]), 500);
-  });
-};
 
-const createWorkoutPlan = async (plan) => {
-  return new Promise(resolve => {
-    const newPlan = {
-      ...plan,
-      id: Math.max(0, ...mockWorkoutPlans.map(p => p.id)) + 1
-    };
-    mockWorkoutPlans.push(newPlan);
-    setTimeout(() => resolve(newPlan), 300);
-  });
-};
 
-const updateWorkoutPlan = async (id, updates) => {
-  return new Promise(resolve => {
-    const index = mockWorkoutPlans.findIndex(p => p.id === id);
-    if (index !== -1) {
-      mockWorkoutPlans[index] = { ...mockWorkoutPlans[index], ...updates };
-      setTimeout(() => resolve(mockWorkoutPlans[index]), 300);
-    } else {
-      throw new Error('Workout plan not found');
-    }
-  });
-};
-
-const deleteWorkoutPlan = async (id) => {
-  return new Promise(resolve => {
-    const initialLength = mockWorkoutPlans.length;
-    mockWorkoutPlans = mockWorkoutPlans.filter(p => p.id !== id);
-    if (mockWorkoutPlans.length < initialLength) {
-      setTimeout(() => resolve({ success: true }), 300);
-    } else {
-      throw new Error('Workout plan not found');
-    }
-  });
-};
 
 const AdminWorkoutPlan = () => {
   const [workoutPlans, setWorkoutPlans] = useState([]);
@@ -81,13 +25,15 @@ const AdminWorkoutPlan = () => {
 
   useEffect(() => {
     fetchPlans();
+    console.log('dd')
   }, []);
 
   const fetchPlans = async () => {
     setLoading(true);
     try {
-      const plans = await getWorkoutPlans();
-      setWorkoutPlans(plans);
+      const data = await getWorkoutPlans();
+      console.log(data)
+      setWorkoutPlans(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Error fetching workout plans:", err);
       setError("Failed to load workout plans");
@@ -169,28 +115,33 @@ const AdminWorkoutPlan = () => {
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">Admin: Workout Plans</h2>
-      <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 mb-8">
+    <div className="min-h-screen bg-gray-900 p-8">
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white">Workout Plans Management</h1>
+          <p className="text-gray-300 mt-2">Create and manage workout plans for your members</p>
+        </div>
+      <form onSubmit={handleSubmit} className="bg-gray-800 shadow-lg rounded-xl p-6 mb-8 border border-gray-700">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block mb-1 font-semibold">Name *</label>
+            <label className="block mb-2 text-sm font-medium text-gray-300">Name *</label>
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleInputChange}
-              className="w-full border px-3 py-2 rounded"
+              className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter plan name"
               required
             />
           </div>
           <div>
-            <label className="block mb-1 font-semibold">Difficulty Level</label>
+            <label className="block mb-2 text-sm font-medium text-gray-300">Difficulty Level</label>
             <select
               name="difficulty_level"
               value={form.difficulty_level}
               onChange={handleInputChange}
-              className="w-full border px-3 py-2 rounded"
+              className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="beginner">Beginner</option>
               <option value="intermediate">Intermediate</option>
@@ -201,14 +152,15 @@ const AdminWorkoutPlan = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="block mb-1 font-semibold">Duration (weeks)</label>
+            <label className="block mb-2 text-sm font-medium text-gray-300">Duration (weeks)</label>
             <input
               type="number"
               name="duration_weeks"
               min="1"
               value={form.duration_weeks}
               onChange={handleNumberChange}
-              className="w-full border px-3 py-2 rounded"
+              className="w-full px-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., 4"
             />
           </div>
           <div className="flex items-center">
@@ -220,94 +172,152 @@ const AdminWorkoutPlan = () => {
               onChange={handleInputChange}
               className="h-4 w-4 text-blue-600 rounded"
             />
-            <label htmlFor="is_public" className="ml-2 block text-sm text-gray-900">
+            <label htmlFor="is_public" className="ml-2 block text-sm text-gray-300">
               Make this plan public
             </label>
           </div>
         </div>
         
-        <div className="mb-4">
-          <label className="block mb-1 font-semibold">Description</label>
+        <div className="mb-6">
+          <label className="block mb-2 text-sm font-medium text-gray-300">Description</label>
           <textarea
             name="description"
             value={form.description}
             onChange={handleInputChange}
-            className="w-full border px-3 py-2 rounded"
-            rows="3"
-            placeholder="Describe the workout plan..."
+            className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            rows="4"
+            placeholder="Provide a detailed description of the workout plan..."
           ></textarea>
         </div>
         
-        <div className="mb-4">
-          <label className="block mb-2 font-semibold">Target Goals</label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        <div className="mb-8">
+          <label className="block mb-3 text-sm font-medium text-gray-300">Target Goals</label>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {['Weight Loss', 'Muscle Gain', 'Strength', 'Endurance', 'Flexibility', 'General Fitness'].map(goal => (
               <label key={goal} className="flex items-center">
-                <input
-                  type="checkbox"
-                  value={goal}
-                  checked={form.target_goals.includes(goal)}
-                  onChange={handleTargetGoalsChange}
-                  className="h-4 w-4 text-blue-600 rounded"
-                />
-                <span className="ml-2 text-sm">{goal}</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    value={goal}
+                    checked={form.target_goals.includes(goal)}
+                    onChange={handleTargetGoalsChange}
+                    className="sr-only"
+                  />
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center mr-2 transition-colors ${
+                    form.target_goals.includes(goal) 
+                      ? 'bg-blue-600 border-blue-600' 
+                      : 'border-gray-500 hover:border-gray-400'
+                  }`}>
+                    {form.target_goals.includes(goal) && <FiCheck className="text-white text-sm" />}
+                  </div>
+                </div>
+                <span className="text-gray-300 text-sm">{goal}</span>
               </label>
             ))}
           </div>
         </div>
         
-        <button
-          type="submit"
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-semibold"
-        >
-          {editingPlan ? "Update Plan" : "Create Plan"}
-        </button>
-        {editingPlan && (
+        <div className="flex justify-end space-x-3">
           <button
             type="button"
-            onClick={() => { setEditingPlan(null); setForm({ name: "", category: "", description: "", exercises: [] }); }}
-            className="ml-4 px-4 py-2 rounded bg-gray-400 text-white hover:bg-gray-600"
+            onClick={() => {
+              setEditingPlan(null);
+              setForm({ 
+                name: "", 
+                description: "", 
+                difficulty_level: "beginner", 
+                duration_weeks: 4,
+                target_goals: [],
+                is_public: true
+              });
+            }}
+            className="px-5 py-2.5 text-sm font-medium text-gray-300 hover:text-white bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
           >
             Cancel
           </button>
-        )}
+          <button
+            type="submit"
+            className="px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+          >
+            {editingPlan ? "Update Plan" : "Create Plan"}
+          </button>
+        </div>
       </form>
-      <h3 className="text-xl font-bold mb-4">All Workout Plans</h3>
+      </div>
+      <div className="mt-12">
+        <h2 className="text-2xl font-bold text-white mb-6">All Workout Plans</h2>
       {loading ? (
-        <div>Loading...</div>
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
       ) : error ? (
-        <div className="text-red-500">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg">
+          <div className="flex items-center">
+            <FiInfo className="mr-2" />
+            {error}
+          </div>
+        </div>
       ) : (
-        <ul>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {workoutPlans.map((plan) => (
-            <li key={plan.id} className="mb-4 border-b pb-3">
-              <div className="flex justify-between items-center">
-                <div>
-                  <span className="font-semibold">{plan.name}</span> ({plan.category})
+            <div key={plan.id} className="bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-gray-600 transition-colors">
+              <div className="p-5">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
+                    <span className="inline-block px-2 py-1 mt-1 text-xs font-medium rounded-full bg-blue-500/20 text-blue-400">
+                      {plan.difficulty_level.charAt(0).toUpperCase() + plan.difficulty_level.slice(1)}
+                    </span>
+                  </div>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(plan)}
+                      className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
+                      title="Edit"
+                    >
+                      <FiEdit />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(plan.id)}
+                      className="p-2 text-red-400 hover:text-red-300 transition-colors"
+                      title="Delete"
+                    >
+                      <FiTrash2 />
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <button
-                    onClick={() => handleEdit(plan)}
-                    className="mr-2 px-3 py-1 rounded bg-yellow-400 text-white hover:bg-yellow-600 text-sm"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(plan.id)}
-                    className="px-3 py-1 rounded bg-red-500 text-white hover:bg-red-700 text-sm"
-                  >
-                    Delete
-                  </button>
+                
+                <p className="mt-3 text-gray-300 text-sm">
+                  {plan.description || 'No description provided'}
+                </p>
+                
+                <div className="mt-4 pt-4 border-t border-gray-700">
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>Duration: {plan.duration_weeks} weeks</span>
+                    <span className="text-green-400">
+                      {plan.is_public ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                  
+                  {plan.target_goals && plan.target_goals.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-xs font-medium text-gray-400 mb-1">GOALS</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {plan.target_goals.map((goal, idx) => (
+                          <span key={idx} className="px-2 py-0.5 text-xs rounded-full bg-gray-700 text-gray-300">
+                            {goal}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="text-gray-700 text-sm mt-1">{plan.description}</div>
-              <div className="text-gray-600 text-xs mt-1">
-                Exercises: {Array.isArray(plan.exercises) ? plan.exercises.join(", ") : ""}
-              </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
+      </div>
     </div>
   );
 };

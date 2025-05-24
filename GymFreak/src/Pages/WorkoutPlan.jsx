@@ -4,6 +4,7 @@ import {
   setUserWorkoutPlan,
   getUserWorkoutPlan,
   removeUserWorkoutPlan,
+  removeAllUserWorkoutPlan,
 } from "../api/workoutPlanApi";
 import { FaDumbbell, FaFire, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
@@ -31,26 +32,27 @@ const WorkoutPlanPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const fetchPlans = async () => {
+    setLoading(true);
+    try {
+      const response = await getWorkoutPlans();
+      const plans = Array.isArray(response) ? response : response?.data || [];
+      setWorkoutPlans(plans);
+    } catch {
+      setError("Failed to load workout plans");
+      setWorkoutPlans([]);
+    }
+    setLoading(false);
+  };
   useEffect(() => {
-    const fetchPlans = async () => {
-      setLoading(true);
-      try {
-        const response = await getWorkoutPlans();
-        const plans = Array.isArray(response) ? response : response?.data || [];
-        setWorkoutPlans(plans);
-      } catch {
-        setError("Failed to load workout plans");
-        setWorkoutPlans([]);
-      }
-      setLoading(false);
-    };
     fetchPlans();
   }, []);
 
   useEffect(() => {
     const fetchUserPlans = async () => {
       try {
-        const plans = await getUserWorkoutPlan();
+        const userInfo = JSON.parse(localStorage.userInfo)
+        const plans = await getUserWorkoutPlan(userInfo.id);
         if (Array.isArray(plans)) {
           setUserPlans(plans);
           setSelectedPlanIds(plans.map((p) => p.id));
@@ -79,7 +81,8 @@ const WorkoutPlanPage = () => {
   const handleSavePlans = async () => {
     setSaving(true);
     try {
-      await setUserWorkoutPlan(selectedPlanIds);
+      const userInfo = JSON.parse(localStorage.userInfo)
+      await setUserWorkoutPlan(userInfo.id,selectedPlanIds);
       setUserPlans(workoutPlans.filter((p) => selectedPlanIds.includes(p.id)));
       setError("");
       toast.success("Workout plans saved successfully!");
@@ -93,10 +96,11 @@ const WorkoutPlanPage = () => {
   const handleDeleteUserPlan = async () => {
     if (!window.confirm("Are you sure you want to remove all your workout plans?")) return;
     setSaving(true);
-    try {
-      await setUserWorkoutPlan([]);
-      setUserPlans([]);
-      setSelectedPlanIds([]);
+    try {console.log('lll')
+      const userInfo = JSON.parse(localStorage.userInfo)
+      await removeAllUserWorkoutPlan(userInfo.id);
+      setUserPlans([])
+      await fetchPlans()
       setError("");
       toast.success("All workout plans removed");
     } catch {
@@ -110,7 +114,8 @@ const WorkoutPlanPage = () => {
     if (!window.confirm("Remove this workout plan?")) return;
     setSaving(true);
     try {
-      await removeUserWorkoutPlan(planId);
+      const userInfo = JSON.parse(localStorage.userInfo)
+      await removeUserWorkoutPlan(userInfo.id, planId);
       setUserPlans((prev) => prev.filter((p) => p.id !== planId));
       setSelectedPlanIds((prev) => prev.filter((id) => id !== planId));
       setError("");
@@ -166,15 +171,12 @@ const WorkoutPlanPage = () => {
                   </div>
 
                   <div className="mb-8">
-                    <h3 className="font-semibold mb-4 text-green-500">Exercises:</h3>
+                    <h3 className="font-semibold mb-4 text-green-500">Goals:</h3>
                     <ul className="space-y-3">
-                      {plan.exercises?.map((exercise, index) => (
+                      {plan.target_goals?.map((goal, index) => (
                         <li key={index} className="flex items-center text-gray-300">
                           <FaCheck className="text-green-500 mr-3" />
-                          {typeof exercise === 'string' 
-                            ? exercise 
-                            : `${exercise.name} - ${exercise.sets} sets × ${exercise.reps} reps`
-                          }
+                          {goal}
                         </li>
                       ))}
                     </ul>
@@ -252,18 +254,15 @@ const WorkoutPlanPage = () => {
                       </div>
                       <p className="text-gray-400 mb-6">{plan.description}</p>
                       <div>
-                        <h4 className="font-semibold mb-4 text-green-500/80">Exercises:</h4>
+                        <h4 className="font-semibold mb-4 text-green-500/80">Goals:</h4>
                         <ul className="space-y-3">
-                          {plan.exercises?.map((exercise, index) => (
-                            <li key={index} className="flex items-center text-gray-300">
-                              <FaCheck className="text-green-500 mr-3" />
-                              {typeof exercise === 'string' 
-                                ? exercise 
-                                : `${exercise.name} - ${exercise.sets} sets × ${exercise.reps} reps`
-                              }
-                            </li>
-                          ))}
-                        </ul>
+                      {plan.target_goals?.map((goal, index) => (
+                        <li key={index} className="flex items-center text-gray-300">
+                          <FaCheck className="text-green-500 mr-3" />
+                          {goal}
+                        </li>
+                      ))}
+                    </ul>
                       </div>
                     </motion.div>
                   ))}

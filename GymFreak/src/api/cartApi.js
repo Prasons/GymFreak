@@ -1,6 +1,7 @@
 import axios from "axios";
-
+import { getAdminToken, getAccessToken } from "../utils/auth";
 const API_BASE = "http://localhost:8080/api/cart"; // Updated port to 8080
+const API_BASE_Pay = "http://localhost:8080/api/payment"; // Updated port to 8080
 
 export const getCartItems = async (token) => {
   try {
@@ -16,11 +17,12 @@ export const getCartItems = async (token) => {
   }
 };
 
-export const addToCart = async (product_id, quantity, token) => {
+export const addToCart = async (orderedItems) => {
   try {
+    const token = getAccessToken();
     const response = await axios.post(
       `${API_BASE}/items`,
-      { product_id, quantity },
+      orderedItems,
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -29,7 +31,7 @@ export const addToCart = async (product_id, quantity, token) => {
     );
     return response.data;
   } catch (error) {
-    console.error("Error adding item to cart:", error);
+    console.error("Error adding items to cart:", error);
     throw error;
   }
 };
@@ -44,6 +46,25 @@ export const removeFromCart = async (cartItemId, token) => {
     return response.data;
   } catch (error) {
     console.error("Error removing item from cart:", error);
+    throw error;
+  }
+};
+
+export const epayment = async (data) => {
+  try {
+    const token = getAccessToken();
+    const response = await axios.post(
+      `${API_BASE_Pay}/epayment`,
+      data,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error in payment:", error);
     throw error;
   }
 };

@@ -46,6 +46,7 @@ import AdminInventory from "./admin/AdminInventory";
 
 // Components
 import PrivateRoute from "./Component/PrivateRoute";
+import KhaltiSandbox from "./Pages/KhaltiSandbox";
 
 function ProtectedRoute({ children }) {
   const isAuthenticated = localStorage.getItem('authToken') !== null;
@@ -114,15 +115,7 @@ function App() {
     };
   }, []);
   
-  // Auto-login for development
-  useEffect(() => {
-    // Auto-login for development
-    if (process.env.NODE_ENV === 'development' && !localStorage.getItem('authToken')) {
-      localStorage.setItem('authToken', 'dummy-user-token');
-      localStorage.setItem('userInfo', JSON.stringify({ email: 'dev@example.com', name: 'Developer' }));
-      setIsAuthenticated(true);
-    }
-  }, []);
+
 
   const handleLogin = () => {
     localStorage.setItem("authToken", "dummy-token");
@@ -163,7 +156,11 @@ function App() {
       )}
 
       <Routes>
-        {/* User Routes */}
+        {/* User Routes */
+         <Route
+          path="/payment"
+          element={<KhaltiSandbox />}
+        />}
         <Route
           path="/login"
           element={<Login onLogin={() => setIsAuthenticated(true)} />}

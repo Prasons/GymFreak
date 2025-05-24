@@ -79,12 +79,6 @@ const AdminDashboard = () => {
       component: <AdminProducts />,
     },
     {
-      id: "inventory",
-      name: "Inventory",
-      icon: <FaBoxes />,
-      component: <AdminProducts />,
-    },
-    {
       id: "diet-plans",
       name: "Diet Plans",
       icon: <FaClipboardList />,
@@ -95,13 +89,7 @@ const AdminDashboard = () => {
       name: "Workout Plans",
       icon: <FaDumbbell />,
       component: <AdminWorkoutPlan />,
-    },
-    {
-      id: "training-schedule",
-      name: "Training Schedule",
-      icon: <FaCalendarAlt />,
-      component: <AdminTrainingSchedule />,
-    },
+    },    
     {
       id: "payments",
       name: "Payments",
@@ -113,12 +101,6 @@ const AdminDashboard = () => {
       name: "Referrals",
       icon: <FaGift />,
       component: <AdminReferral />,
-    },
-    {
-      id: "classes",
-      name: "Classes",
-      icon: <FaUsers />,
-      component: <AdminClasses />,
     },
   ];
 
@@ -204,23 +186,7 @@ const AdminDashboard = () => {
             <h1 className="text-3xl font-bold">
               {menuItems.find((item) => item.id === activeView)?.name}
             </h1>
-            <div className="flex items-center space-x-4">
-              <button
-                type="button"
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors relative"
-              >
-                <FaBell />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-xs flex items-center justify-center">
-                  3
-                </span>
-              </button>
-              <button
-                type="button"
-                className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
-              >
-                <FaCog />
-              </button>
-            </div>
+            
           </div>
 
           {/* Dynamic Content */}
