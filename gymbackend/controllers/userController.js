@@ -3,6 +3,8 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import pool from "../config/db.js";
 import Admin from "../models/adminModel.js"; // Use ES module import for the Admin model
+import { sendEmail } from "../scripts/email-service.js"; 
+import { signuptemplate } from "../scripts/email-templates.js";
 
 // Store refresh tokens in memory for simplicity (use a database in production)
 const refreshTokens = new Map();
@@ -11,7 +13,7 @@ const refreshTokens = new Map();
 import { useReferralCode, completeReferral, generateReferralCode } from "./referralController.js";
 
 export const registerUser = async (req, res) => {
-  const { first_name, last_name, email, password, referral_code } = req.body;
+  const { name, email, password, referral_code } = req.body;
 
   try {
     const userExists = await pool.query(
@@ -31,12 +33,12 @@ export const registerUser = async (req, res) => {
     }
 
     const newUser = await pool.query(
-      `INSERT INTO users 
-       (first_name, last_name, email, password, status) 
-       VALUES ($1, $2, $3, $4, 'active') 
-       RETURNING id, first_name, last_name, email, status, created_at`,
-      [first_name, last_name, email, hashedPassword]
-    );
+  `INSERT INTO users 
+   (first_name, email, password, status) 
+   VALUES ($1, $2, $3, 'Active') 
+   RETURNING id, first_name, email, status, created_at`,
+  [name, email, hashedPassword]
+);
 
     // 2. Generate a referral code for the new user
     await generateReferralCode(newUser.rows[0].id);
@@ -45,12 +47,19 @@ export const registerUser = async (req, res) => {
     if (referral_code) {
       await completeReferral(email, newUser.rows[0].id);
     }
+ 
 
+      const result = await sendEmail({
+        to:email,
+        ...signuptemplate
+      });
+    
     res.status(201).json({ 
       message: "User created successfully", 
       user: {
         ...newUser.rows[0],
-        name: `${first_name || ''} ${last_name || ''}`.trim() || email
+        name: name,
+        mailsent:result
       } 
     });
   } catch (err) {
@@ -79,7 +88,7 @@ export const loginUser = async (req, res) => {
     }
 
     // Check user status
-    if (user.rows[0].status !== 'active') {
+    if (user.rows[0].status !== 'Active') {
       console.log('User account is not active:', user.status);
       return res.status(403).json({ message: "Account is not active" });
     }

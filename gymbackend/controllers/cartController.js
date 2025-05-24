@@ -2,37 +2,44 @@ import pool from "../config/db.js";
 
 // Add to cart
 export const addToCart = async (req, res) => {
-  const { product_id, quantity } = req.body;
+  const client = await pool.connect();
+  const products = req.body;
   const userId = req.user ? req.user.userId : null; // Handle unauthenticated users
 
   if (!userId) {
     return res.status(400).json({ message: "User ID is required to add to cart" });
   }
-
   try {
-    const existing = await pool.query(
-      "SELECT * FROM cart WHERE user_id = $1 AND product_id = $2",
-      [userId, product_id]
-    );
+    await client.query('BEGIN');
 
-    if (existing.rows.length > 0) {
-      await pool.query(
-        "UPDATE cart SET quantity = quantity + $1 WHERE user_id = $2 AND product_id = $3",
-        [quantity, userId, product_id]
-      );
-    } else {
-      await pool.query(
-        "INSERT INTO cart (user_id, product_id, quantity) VALUES ($1, $2, $3)",
-        [userId, product_id, quantity]
-      );
+    // Insert into cart table and get cart_id
+    const cartResult = await client.query(
+      `INSERT INTO cart (user_id, created_at, updated_at)
+       VALUES ($1, NOW(), NOW())
+       RETURNING id`,
+      [userId]
+    );
+    const cartId = cartResult.rows[0].id;
+      // Prepare cart_items insert values
+
+    if (products.length > 0) {
+      for (const product of products) {
+        await client.query(
+          `INSERT INTO cart_items (cart_id, product_id, quantity, created_at, updated_at) VALUES ($1, $2,$3,NOW(),NOW())`,
+          [parseInt(cartId), parseInt(product.id),parseInt(product.quantity)]);
+      }
     }
 
-    res.status(200).json({ message: "Product added to cart" });
-  } catch (err) {
-    // Enhanced error logging for debugging
-    console.error("Add to cart error:", err, "Payload:", { userId, product_id, quantity });
-    res.status(500).json({ message: "Server error", error: err.message });
+    await client.query('COMMIT');
+    res.status(201).json({ message: 'Cart and items created successfully', cartId });
+  } catch (error) {
+    await client.query('ROLLBACK');
+     console.error(error.message);
+    res.status(500).json({ message: "Server error" });
   }
+
+  
+  
 };
 
 // Get user cart

@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { connectDB } from "./config/db.js";
 
+
 // Import routes
 import userRoutes from "./routes/userRoutes.js";
 import trainerRoutes from "./routes/trainerRoutes.js";
@@ -18,6 +19,7 @@ import referralRoutes from "./routes/referralRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import membershipPlanRoutes from "./routes/membershipPlanRoutes.js";
 import progressRoutes from "./routes/progressRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 import testRoutes from "./routes/testRoutes.js";
 
 // Get directory name in ES module
@@ -124,6 +126,8 @@ app.use("/api/referrals", referralRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/membership-plans", membershipPlanRoutes);
 app.use("/api/progress", progressRoutes);
+
+app.use("/api/payment",paymentRoutes)
 
 // Test routes (temporary, remove in production)
 app.use('/api/test', testRoutes);

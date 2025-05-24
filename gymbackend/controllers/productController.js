@@ -2,30 +2,30 @@ import pool from "../config/db.js";
 
 // Add a product
 export const addProduct = async (req, res) => {
-  console.log('=== REQUEST BODY ===', req.body);
-  console.log('=== REQUEST FILES ===', req.file);
-  console.log('=== REQUEST HEADERS ===', req.headers);
-  console.log('=== REQUEST CONTENT TYPE ===', req.get('Content-Type'));
-  console.log('=== MULTIPART FIELDS ===', req.body); // This will show form fields if using multer properly
-  
+  console.log("=== REQUEST BODY ===", req.body);
+  console.log("=== REQUEST FILES ===", req.file);
+  console.log("=== REQUEST HEADERS ===", req.headers);
+  console.log("=== REQUEST CONTENT TYPE ===", req.get("Content-Type"));
+  console.log("=== MULTIPART FIELDS ===", req.body); // This will show form fields if using multer properly
+
   try {
     if (!req.file) {
-      console.error('No file uploaded');
-      return res.status(400).json({ 
+      console.error("No file uploaded");
+      return res.status(400).json({
         success: false,
-        message: 'Please upload an image file' 
+        message: "Please upload an image file",
       });
     }
 
     const { name, description, price, category, stock_quantity } = req.body;
-    
+
     // Validation
     if (!name || !description || !price || !category) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
-        required: ['name', 'description', 'price', 'category', 'image'],
-        received: { name, description, price, category, hasImage: !!req.file }
+        message: "Missing required fields",
+        required: ["name", "description", "price", "category", "image"],
+        received: { name, description, price, category, hasImage: !!req.file },
       });
     }
 
@@ -34,29 +34,30 @@ export const addProduct = async (req, res) => {
     if (isNaN(priceValue) || priceValue <= 0) {
       return res.status(400).json({
         success: false,
-        message: 'Price must be a positive number'
+        message: "Price must be a positive number",
       });
     }
 
     // Prepare image path
     const imagePath = `/uploads/${req.file.filename}`;
-    
-    console.log('Attempting to insert product with:', {
+
+    console.log("Attempting to insert product with:", {
       name,
       description,
       price: priceValue,
       category,
       stock_quantity: stock_quantity || 10,
-      image_url: imagePath
+      image_url: imagePath,
     });
 
     // Get the admin ID from the authenticated admin
     const adminId = req.user?.id;
-    
+
     if (!adminId) {
       return res.status(403).json({
         success: false,
-        message: 'Not authorized to perform this action. Please log in as an admin.'
+        message:
+          "Not authorized to perform this action. Please log in as an admin.",
       });
     }
 
@@ -73,38 +74,187 @@ export const addProduct = async (req, res) => {
         category,
         parseInt(stock_quantity) || 10,
         imagePath,
-        adminId
+        adminId,
       ]
     );
 
     if (!result.rows[0]) {
-      throw new Error('Failed to create product');
+      throw new Error("Failed to create product");
     }
 
-    console.log('Product created successfully:', result.rows[0]);
-    
+    console.log("Product created successfully:", result.rows[0]);
+
     res.status(201).json({
       success: true,
-      message: 'Product added successfully',
-      product: result.rows[0]
+      message: "Product added successfully",
+      product: result.rows[0],
     });
-    
   } catch (error) {
-    console.error('=== DATABASE ERROR ===');
-    console.error('Error code:', error.code);
-    console.error('Error detail:', error.detail);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    
+    console.error("=== DATABASE ERROR ===");
+    console.error("Error code:", error.code);
+    console.error("Error detail:", error.detail);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+
     res.status(500).json({
       success: false,
-      message: 'Failed to add product',
-      error: process.env.NODE_ENV === 'development' ? {
-        code: error.code,
-        detail: error.detail,
-        message: error.message,
-        stack: error.stack
-      } : undefined
+      message: "Failed to add product",
+      error:
+        process.env.NODE_ENV === "development"
+          ? {
+              code: error.code,
+              detail: error.detail,
+              message: error.message,
+              stack: error.stack,
+            }
+          : undefined,
+    });
+  }
+};
+
+//update
+export const updateProduct = async (req, res) => {
+  const { id } = req.params;
+  let image = req.query.hasimage;
+  console.log("=== REQUEST BODY ===", req.body);
+  console.log("=== REQUEST FILES ===", req.file);
+  console.log("=== REQUEST HEADERS ===", req.headers);
+  console.log("=== REQUEST CONTENT TYPE ===", req.get("Content-Type"));
+  console.log("=== MULTIPART FIELDS ===", req.body); // This will show form fields if using multer properly
+
+  try {
+    const { name, description, price, category, stock_quantity } = req.body;
+
+    // Validation
+    if (!name || !description || !price || !category) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+        required: ["name", "description", "price", "category", "image"],
+        received: { name, description, price, category, hasImage: !!req.file },
+      });
+    }
+
+    // Parse price to number
+    const priceValue = parseFloat(price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Price must be a positive number",
+      });
+    }
+
+    const adminId = req.user?.id;
+
+    if (!adminId) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Not authorized to perform this action. Please log in as an admin.",
+      });
+    }
+    let result;
+    if (image=='false') {
+       result = await pool.query(
+        `UPDATE products 
+   SET name = $1,
+       description = $2,
+       price = $3,
+       category = $4,
+       stock_quantity = $5,
+       created_by = $6,
+       is_active = true,
+       updated_at = NOW()
+   WHERE id = $7
+   RETURNING *`,
+        [
+          name,
+          description,
+          priceValue,
+          category,
+          parseInt(stock_quantity) || 10,
+          adminId,
+          id,
+        ]
+      );
+    } else {
+      if (!req.file) {
+        console.error("No file uploaded");
+        return res.status(400).json({
+          success: false,
+          message: "Please upload an image file",
+        });
+      }
+
+      // Prepare image path
+      const imagePath = `/uploads/${req.file.filename}`;
+
+      console.log("Attempting to insert product with:", {
+        name,
+        description,
+        price: priceValue,
+        category,
+        stock_quantity: stock_quantity || 10,
+        image_url: imagePath,
+      });
+
+      // Insert into database
+      result = await pool.query(
+        `UPDATE products 
+   SET name = $1,
+       description = $2,
+       price = $3,
+       category = $4,
+       stock_quantity = $5,
+       image_url = $6,
+       created_by = $7,
+       is_active = true,
+       updated_at = NOW()
+   WHERE id = $8
+   RETURNING *`,
+        [
+          name,
+          description,
+          priceValue,
+          category,
+          parseInt(stock_quantity) || 10,
+          imagePath,
+          adminId,
+          id,
+        ]
+      );
+    }
+
+    if (!result.rows[0]) {
+      throw new Error("Failed to update product");
+    }
+
+    console.log("Product updated successfully:", result.rows[0]);
+
+    res.status(201).json({
+      success: true,
+      message: "Product updated successfully",
+      product: result.rows[0],
+    });
+  } catch (error) {
+    console.error("=== DATABASE ERROR ===");
+    console.error("Error code:", error.code);
+    console.error("Error detail:", error.detail);
+    console.error("Error message:", error.message);
+    console.error("Error stack:", error.stack);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update product",
+      error:
+        process.env.NODE_ENV === "development"
+          ? {
+              code: error.code,
+              detail: error.detail,
+              message: error.message,
+              stack: error.stack,
+            }
+          : undefined,
     });
   }
 };

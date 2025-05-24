@@ -131,7 +131,7 @@ export const deleteWorkoutPlan = async (req, res) => {
     
     // First, delete related workout plan exercises
     await pool.query(
-      'DELETE FROM workout_plan_exercises WHERE workoutplan_id = $1',
+      'DELETE FROM workout_plan_exercises WHERE workout_plan_id = $1',
       [id]
     );
     

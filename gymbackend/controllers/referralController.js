@@ -33,15 +33,16 @@ export const useReferralCode = async (req, res) => {
   const { referral_code, referred_email } = req.body; // referred_email is the new user's email
   try {
     // Find referrer
-    const referrerRes = await pool.query("SELECT id FROM users WHERE referral_code = $1", [referral_code]);
+    const referrerRes = await pool.query("SELECT id,email FROM users WHERE referral_code = $1", [referral_code]);
     if (referrerRes.rows.length === 0) {
       return res.status(404).json({ message: "Referral code not found" });
     }
     const referrerId = referrerRes.rows[0].id;
+    const referrer_email = referrerRes.rows[0].email;
     // Create referral entry (referred_user_id will be filled after user signup)
     const result = await pool.query(
-      `INSERT INTO referrals (referrer_user_id, referred_email, status) VALUES ($1, $2, 'pending') RETURNING *`,
-      [referrerId, referred_email]
+      `INSERT INTO referrals (referrer_user_id, referred_email, referrer_email, status) VALUES ($1, $2, $3, 'pending') RETURNING *`,
+      [referrerId, referred_email, referrer_email]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -78,7 +79,14 @@ export const getMyReferrals = async (req, res) => {
 export const getAllReferrals = async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT r.*, ref.email AS referrer_email, u.email AS referred_email_actual FROM referrals r JOIN users ref ON r.referrer_user_id = ref.id LEFT JOIN users u ON r.referred_user_id = u.id ORDER BY r.created_at DESC`
+      `SELECT 
+         ref.email AS referrer_email,
+         ref.referral_code,
+         COUNT(r.referred_user_id) AS total_referred
+       FROM referrals r
+       JOIN users ref ON r.referrer_user_id = ref.id
+       GROUP BY ref.email, ref.referral_code
+       ORDER BY total_referred DESC`
     );
     res.json(result.rows);
   } catch (err) {

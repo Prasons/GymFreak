@@ -7,6 +7,7 @@ import {
   addProduct,
   getProducts,
   deleteProduct,
+  updateProduct,
 } from "../controllers/productController.js";
 
 const router = express.Router();
@@ -77,6 +78,42 @@ router.post("/",
     });
   },
   addProduct
+);
+
+router.put("/:id", 
+  adminProtect, 
+  (req, res, next) => {
+    let image = req.query.hasimage;
+    if(image==='false'){
+      next();
+    }
+    else{
+    upload.single("image")(req, res, (err) => {
+      if (err instanceof multer.MulterError) {
+        // A Multer error occurred when uploading
+        return res.status(400).json({
+          success: false,
+          message: 'File upload error',
+          error: err.message
+        });
+      } else if (err) {
+        // An unknown error occurred
+        return res.status(400).json({
+          success: false,
+          message: 'Error processing file upload',
+          error: err.message
+        });
+      }
+      if (!req.file) {
+        return res.status(400).send({ message: 'No file uploaded' });
+      }
+      let i= req.body;
+      // Everything went fine
+      next();
+    });
+    }
+  },
+  updateProduct
 );
 
 // Delete a product

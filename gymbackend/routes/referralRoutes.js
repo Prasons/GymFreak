@@ -20,7 +20,7 @@ router.post("/use", useReferralCode);
 router.get("/my-referrals", protect, getMyReferrals);
 
 // Admin: See all referrals
-router.get("/all", protect, adminProtect, getAllReferrals);
+router.get("/all", getAllReferrals);
 
 // Admin: Mark reward as given
 router.put("/reward/:id", protect, adminProtect, markRewardGiven);
