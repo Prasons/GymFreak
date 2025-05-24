@@ -24,16 +24,33 @@ export const CartProvider = ({ children }) => {
   const addToCart = (item) => {
     setCartItems(prevItems => {
       const existingItem = prevItems.find(i => i.id === item.id);
+      
+      // Check if adding would exceed available stock
       if (existingItem) {
+        if (existingItem.quantity >= (item.stock || 0)) {
+          toast.warning(`Only ${item.stock} ${item.name} available in stock`);
+          return prevItems;
+        }
         return prevItems.map(i =>
           i.id === item.id
             ? { ...i, quantity: i.quantity + 1 }
             : i
         );
       }
+      
+      // For new item, check if it's in stock
+      if (item.stock < 1) {
+        toast.warning(`${item.name} is out of stock`);
+        return prevItems;
+      }
+      
       return [...prevItems, { ...item, quantity: 1 }];
     });
-    toast.success(`${item.name} added to cart!`);
+    
+    const existingItem = cartItems.find(i => i.id === item.id);
+    if (!existingItem || existingItem.quantity < (item.stock || 0)) {
+      toast.success(`${item.name} added to cart!`);
+    }
   };
 
   const removeFromCart = (itemId) => {
@@ -51,13 +68,27 @@ export const CartProvider = ({ children }) => {
       removeFromCart(itemId);
       return;
     }
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.id === itemId
-          ? { ...item, quantity: newQuantity }
-          : item
-      )
-    );
+    
+    setCartItems(prevItems => {
+      const item = prevItems.find(i => i.id === itemId);
+      if (!item) return prevItems;
+      
+      // Check stock limit
+      if (item.stock !== undefined && newQuantity > item.stock) {
+        toast.warning(`Only ${item.stock} ${item.name} available in stock`);
+        return prevItems.map(i =>
+          i.id === itemId
+            ? { ...i, quantity: item.stock }
+            : i
+        );
+      }
+      
+      return prevItems.map(i =>
+        i.id === itemId
+          ? { ...i, quantity: newQuantity }
+          : i
+      );
+    });
   };
 
   const clearCart = () => {

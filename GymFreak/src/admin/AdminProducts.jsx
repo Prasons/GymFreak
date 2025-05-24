@@ -80,11 +80,13 @@ const AdminProducts = () => {
     price: "",
     category: "",
     image: "",
+    stock_quantity: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const navigate = useNavigate();
@@ -112,29 +114,43 @@ const AdminProducts = () => {
   }, []);
 
   const handleInputChange = (e) => {
-    setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
+    if (editingProduct) {
+      setEditingProduct({ ...editingProduct, [e.target.name]: e.target.value });
+    } else {
+      setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
+    }
   };
 
   const handleFileChange = (e) => {
-    setNewProduct({ ...newProduct, image: e.target.files[0] });
+    if (editingProduct) {
+      setEditingProduct({ ...editingProduct, image: e.target.files[0] });
+    } else {
+      setNewProduct({ ...newProduct, image: e.target.files[0] });
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setEditingProduct({ 
+      ...product,
+      stock_quantity: product.stock_quantity || 0 
+    });
+    setShowAddModal(true);
   };
 
   const handleAddProduct = async (e) => {
     e.preventDefault();
 
-    // Check admin status
-    if (!isAdmin()) {
-      toast.error('You do not have permission to add products');
-      navigate('/login');
-      return;
-    }
+    const productData = editingProduct || newProduct;
 
-    // Validate required fields
-    if (!newProduct.name || !newProduct.price || !newProduct.category) {
-      setError('Please fill in all required fields');
-      toast.error('Please fill in all required fields');
+    // Validate form
+    if (!productData.name || !productData.price || !productData.category || productData.stock_quantity === '') {
+      setError("Please fill in all required fields");
+      toast.error("Please fill in all required fields");
       return;
     }
+    
+    // Ensure stock_quantity is a number
+    const stockQuantity = parseInt(productData.stock_quantity, 10) || 0;
 
     if (!newProduct.image) {
       setError('Please select an image');
@@ -153,17 +169,35 @@ const AdminProducts = () => {
     const toastId = toast.loading('Adding product...');
     try {
       setIsSubmitting(true);
-      setError(null);
-      
-      // Show loading toast
-      
-      await createProduct(formData);
-      
-      // Update the products list
-      const data = await getProducts();
-      setProducts(data);
-      
-      // Reset form
+      const isEditing = !!editingProduct;
+      const toastId = toast.loading(isEditing ? "Updating product..." : "Adding product...");
+
+      if (isEditing) {
+        // Update existing product
+        const index = mockProducts.findIndex(p => p.id === editingProduct.id);
+        if (index > -1) {
+          mockProducts[index] = { 
+            ...editingProduct,
+            price: parseFloat(editingProduct.price),
+            stock_quantity: stockQuantity
+          };
+        }
+      } else {
+        // Add new product
+        const newProductData = {
+          ...productData,
+          id: Math.max(0, ...mockProducts.map(p => p.id)) + 1,
+          price: parseFloat(productData.price),
+          stock_quantity: stockQuantity,
+          image: 'https://via.placeholder.com/150'
+        };
+        mockProducts.push(newProductData);
+      }
+
+      // Update state
+      setProducts([...mockProducts]);
+
+      // Reset form and editing state
       setNewProduct({
         name: '',
         description: '',
@@ -171,15 +205,16 @@ const AdminProducts = () => {
         category: '',
         image: null,
       });
-      setShowAddModal(false)
+      setEditingProduct(null);
+
       // Clear file input
       const fileInput = document.getElementById('image-upload');
       if (fileInput) fileInput.value = '';
       
       // Show success message
       toast.update(toastId, {
-        render: 'Product added successfully!',
-        type: 'success',
+        render: isEditing ? "Product updated successfully!" : "Product added successfully!",
+        type: "success",
         isLoading: false,
         autoClose: 3000,
       });
@@ -255,7 +290,10 @@ const AdminProducts = () => {
         <h1 className="text-3xl font-bold">Products Management</h1>
         <button 
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setEditingProduct(null);
+            setShowAddModal(true);
+          }}
           type="button"
         >
           <FiPlus />
@@ -312,8 +350,8 @@ const AdminProducts = () => {
               </div>
               <p className="text-gray-400 text-sm mb-2">{product.description}</p>
               <div className="flex justify-between items-center">
-                <span className="px-2 py-1 bg-gray-700 text-sm rounded-lg">
-                  Stock: {product.stock_quantity}
+                <span className={`px-2 py-1 text-sm rounded-lg ${product.stock_quantity > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {product.stock_quantity > 0 ? `In Stock: ${product.stock_quantity}` : 'Out of Stock'}
                 </span>
                 <span className="px-2 py-1 bg-blue-500/20 text-blue-400 text-sm rounded-lg">
                   {product.category}
@@ -330,6 +368,7 @@ const AdminProducts = () => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleEditProduct(product)}
                   className="p-2 text-blue-400 hover:text-blue-300 transition-colors"
                   title="Edit"
                 >
@@ -346,10 +385,13 @@ const AdminProducts = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-gray-800 rounded-xl p-6 w-full max-w-md">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Add New Product</h2>
+              <h2 className="text-2xl font-bold">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
               <button
                 type="button"
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingProduct(null);
+                }}
                 className="p-2 hover:text-gray-400 transition-colors"
               >
                 <FiPlus className="rotate-45" />
@@ -361,7 +403,7 @@ const AdminProducts = () => {
                 <input
                   type="text"
                   name="name"
-                  value={newProduct.name}
+                  value={editingProduct ? editingProduct.name : newProduct.name}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter product name"
@@ -371,7 +413,7 @@ const AdminProducts = () => {
                 <label className="block mb-2">Description</label>
                 <textarea
                   name="description"
-                  value={newProduct.description}
+                  value={editingProduct ? editingProduct.description : newProduct.description}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Enter product description"
@@ -385,7 +427,7 @@ const AdminProducts = () => {
                   <input
                     type="number"
                     name="price"
-                    value={newProduct.price}
+                    value={editingProduct ? editingProduct.price : newProduct.price}
                     onChange={handleInputChange}
                     className="w-full pl-8 px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="0.00"
@@ -394,19 +436,34 @@ const AdminProducts = () => {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block mb-2">Category</label>
-                <select
-                  name="category"
-                  value={newProduct.category}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Select category</option>
-                  <option value="Supplements">Supplements</option>
-                  <option value="Equipment">Equipment</option>
-                  <option value="Accessories">Accessories</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block mb-2">Category</label>
+                  <select
+                    name="category"
+                    value={editingProduct ? editingProduct.category : newProduct.category}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select a category</option>
+                    <option value="Supplements">Supplements</option>
+                    <option value="Equipment">Equipment</option>
+                    <option value="Accessories">Accessories</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-2">Stock Quantity</label>
+                  <input
+                    type="number"
+                    name="stock_quantity"
+                    min="0"
+                    value={editingProduct ? editingProduct.stock_quantity : newProduct.stock_quantity}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 bg-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
               <div>
                 <label className="block mb-2">Product Image</label>
@@ -430,7 +487,10 @@ const AdminProducts = () => {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setEditingProduct(null);
+                  }}
                   className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
                   disabled={isSubmitting}
                 >
@@ -444,10 +504,10 @@ const AdminProducts = () => {
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
-                      Adding...
+                      {editingProduct ? 'Updating...' : 'Adding...'}
                     </>
                   ) : (
-                    'Add Product'
+                    editingProduct ? 'Update Product' : 'Add Product'
                   )}
                 </button>
               </div>

@@ -9,9 +9,14 @@ import {
   FaBookmark,
   FaRegBookmark,
   FaTrash,
+  FaTimes
 } from "react-icons/fa";
 import axios from "axios";
 import { toast } from "react-toastify";
+
+// Edamam API credentials
+const APP_ID = 'b9116576'; // Replace with your actual app ID
+const APP_KEY = '36766bd231afa29a5262aa7695a4bc96'; // Replace with your actual app key
 
 // Helper function to format date
 const formatDate = (dateString) => {
@@ -28,8 +33,9 @@ const formatDate = (dateString) => {
 const NutritionSearch = () => {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [selectedFood, setSelectedFood] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [recentSearches, setRecentSearches] = useState([]);
   const [savedFoods, setSavedFoods] = useState([]);
   const [activeTab, setActiveTab] = useState("search");
@@ -47,46 +53,171 @@ const NutritionSearch = () => {
     }
   }, []);
 
+  // Helper function to normalize nutrient data
+  const normalizeNutrient = (nutrient, defaultUnit = '') => {
+    // Handle null/undefined
+    if (nutrient === null || nutrient === undefined) {
+      return { quantity: 0, unit: defaultUnit };
+    }
+    
+    // If it's already in the correct format with quantity
+    if (typeof nutrient === 'object' && 'quantity' in nutrient) {
+      return {
+        quantity: Number(nutrient.quantity) || 0,
+        unit: nutrient.unit || defaultUnit
+      };
+    }
+    
+    // If it's an object with a value property (common in some API formats)
+    if (typeof nutrient === 'object' && 'value' in nutrient) {
+      return {
+        quantity: Number(nutrient.value) || 0,
+        unit: nutrient.unit || defaultUnit
+      };
+    }
+    
+    // If it's an object with an amount property (common in some API formats)
+    if (typeof nutrient === 'object' && 'amount' in nutrient) {
+      return {
+        quantity: Number(nutrient.amount) || 0,
+        unit: nutrient.unit || defaultUnit
+      };
+    }
+    
+    // If it's a number or string that can be converted to a number
+    const numericValue = Number(nutrient);
+    if (!isNaN(numericValue)) {
+      return { 
+        quantity: numericValue, 
+        unit: defaultUnit 
+      };
+    }
+    
+    // If it's a string with a number and unit (e.g., "10g")
+    const match = String(nutrient).match(/([\d.]+)\s*(\w*)/);
+    if (match) {
+      return {
+        quantity: parseFloat(match[1]) || 0,
+        unit: match[2] || defaultUnit
+      };
+    }
+    
+    // Default fallback
+    console.warn('Could not normalize nutrient:', nutrient);
+    return { quantity: 0, unit: defaultUnit };
+  };
+
   const searchFood = async (searchQuery) => {
     if (!searchQuery.trim()) return;
 
     setLoading(true);
-    try {
-      // In a real app, use your backend to make this API call to keep API keys secure
-      const response = await axios.get(
-        `https://api.edamam.com/api/nutrition-data?app_id=YOUR_APP_ID&app_key=YOUR_APP_KEY&ingr=${encodeURIComponent(
-          searchQuery
-        )}`
-      );
+    setError(null);
 
-      if (response.data && response.data.calories) {
+    try {
+      // Using Edamam Nutrition API with a more specific query format
+      const apiUrl = `https://api.edamam.com/api/nutrition-data?app_id=${APP_ID}&app_key=${APP_KEY}&ingr=${encodeURIComponent(
+        `100g ${searchQuery}`
+      )}`;
+      
+      console.log('Making API request to:', apiUrl);
+      
+      const response = await axios.get(apiUrl);
+      console.log('API Response:', response.data);
+
+      if (response.data) {
+        // Extract nutrients from the response
+        let nutrients = response.data.totalNutrients || {};
+        
+        // If we have ingredients with parsed data (v2 format)
+        if (response.data.ingredients?.[0]?.parsed?.[0]?.food?.nutrients) {
+          Object.assign(nutrients, response.data.ingredients[0].parsed[0].food.nutrients);
+        }
+        
+        // If we're getting a 200 but no nutrients, try the analysis data
+        if (Object.keys(nutrients).length === 0 && response.data.ingredients?.[0]?.parsed?.[0]?.nutrients) {
+          nutrients = response.data.ingredients[0].parsed[0].nutrients;
+        }
+        
+        // Debug log the raw nutrients
+        console.log('Raw nutrients:', nutrients);
+        
+        // Create a normalized nutrients object with fallbacks
+        const normalizedNutrients = {
+          // Macronutrients
+          PROCNT: normalizeNutrient(nutrients.PROCNT || nutrients.protein, 'g'),
+          CHOCDF: normalizeNutrient(nutrients.CHOCDF || nutrients.carbs || nutrients.carbohydrates, 'g'),
+          FAT: normalizeNutrient(nutrients.FAT || nutrients.fat, 'g'),
+          FIBTG: normalizeNutrient(nutrients.FIBTG || nutrients.fiber, 'g'),
+          SUGAR: normalizeNutrient(nutrients.SUGAR || nutrients.sugar, 'g'),
+          
+          // Vitamins
+          VITA_RAE: normalizeNutrient(nutrients.VITA_RAE || nutrients.VIT_RAE || nutrients.vitaminA, 'mcg'),
+          VITC: normalizeNutrient(nutrients.VITC || nutrients.vitaminC, 'mg'),
+          VITD: normalizeNutrient(nutrients.VITD || nutrients.vitaminD, 'mcg'),
+          TOCPHA: normalizeNutrient(nutrients.TOCPHA || nutrients.vitaminE, 'mg'),
+          
+          // Minerals
+          CA: normalizeNutrient(nutrients.CA || nutrients.calcium, 'mg'),
+          FE: normalizeNutrient(nutrients.FE || nutrients.iron, 'mg'),
+          K: normalizeNutrient(nutrients.K || nutrients.potassium, 'mg'),
+          NA: normalizeNutrient(nutrients.NA || nutrients.sodium, 'mg'),
+          
+          // Include all other nutrients as-is
+          ...nutrients
+        };
+        
+        // Calculate calories if not provided
+        const calculatedCalories = response.data.calories || 
+          (normalizedNutrients.PROCNT.quantity * 4 + 
+           normalizedNutrients.CHOCDF.quantity * 4 + 
+           normalizedNutrients.FAT.quantity * 9);
+        
         const foodData = {
           ...response.data,
+          calories: calculatedCalories,
+          totalWeight: response.data.totalWeight || 100, // Default to 100g if not specified
+          dietLabels: response.data.dietLabels || [],
+          healthLabels: response.data.healthLabels || [],
+          totalNutrients: nutrients,
+          totalDaily: response.data.totalDaily || {},
           query: searchQuery,
           timestamp: new Date().toISOString(),
+          nutrients: normalizedNutrients
         };
-
+        
+        console.log('Processed food data:', foodData);
+        
+        // If we still don't have any nutrient data, show an error
+        if (Object.keys(nutrients).length === 0) {
+          throw new Error('No nutritional data available for this food item. Please try a different search term.');
+        }
+        
         setSelectedFood(foodData);
-        setResults((prev) => [foodData, ...prev]);
-
-        // Update recent searches
-        const newRecentSearches = [
-          { query: searchQuery, timestamp: new Date().toISOString() },
-          ...recentSearches
-            .filter(
-              (item) => item.query.toLowerCase() !== searchQuery.toLowerCase()
-            )
-            .slice(0, 4),
-        ];
-        setRecentSearches(newRecentSearches);
-        localStorage.setItem(
-          "recentNutritionSearches",
-          JSON.stringify(newRecentSearches)
-        );
+        addToRecentSearches(searchQuery);
+      } else {
+        setError('No data received from the API. Please try again.');
       }
-    } catch (error) {
-      console.error("Error searching for food:", error);
-      toast.error("Failed to fetch nutrition data. Please try again.");
+    } catch (err) {
+      console.error('Error fetching nutrition data:', err);
+      let errorMessage = 'Failed to fetch nutrition data. Please try again.';
+      
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        console.error('Error response data:', err.response.data);
+        console.error('Error status:', err.response.status);
+        errorMessage = `Error: ${err.response.status} - ${err.response.data?.message || 'Unknown error'}`;
+      } else if (err.request) {
+        // The request was made but no response was received
+        console.error('No response received:', err.request);
+        errorMessage = "No response from the server. Please check your connection.";
+      } else {
+        // Something happened in setting up the request that triggered an Error
+        console.error('Error message:', err.message);
+        errorMessage = `Error: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      setSelectedFood(null);
     } finally {
       setLoading(false);
     }
@@ -107,6 +238,21 @@ const NutritionSearch = () => {
     toast.success("Food saved to your collection!");
   };
 
+  const isFoodSaved = (food) => {
+    if (!food) return false;
+    // First check by ID if available
+    if (food.id) {
+      return savedFoods.some(item => item.id === food.id);
+    }
+    // Fall back to checking by query if no ID
+    if (food.query) {
+      return savedFoods.some(
+        item => item.query?.toLowerCase() === food.query?.toLowerCase()
+      );
+    }
+    return false;
+  };
+
   const handleRemoveSavedFood = (foodId) => {
     const updatedSavedFoods = savedFoods.filter((food) => food.id !== foodId);
     setSavedFoods(updatedSavedFoods);
@@ -114,16 +260,35 @@ const NutritionSearch = () => {
     toast.info("Food removed from your collection");
   };
 
-  const isFoodSaved = (food) => {
-    if (!food || !food.query) return false;
-    return savedFoods.some(
-      (item) => item.query?.toLowerCase() === food.query?.toLowerCase()
-    );
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!query.trim()) return;
+    setError(null); // Clear any previous errors
+    await searchFood(query);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    searchFood(query);
+  const addToRecentSearches = (searchQuery) => {
+    setRecentSearches(prevSearches => {
+      // Remove duplicate searches and keep only the 5 most recent
+      const newSearches = [
+        { query: searchQuery, timestamp: new Date().toISOString() },
+        ...prevSearches.filter(item => 
+          item.query.toLowerCase() !== searchQuery.toLowerCase()
+        )
+      ].slice(0, 5);
+      
+      // Save to localStorage
+      localStorage.setItem('recentNutritionSearches', JSON.stringify(newSearches));
+      return newSearches;
+    });
+  };
+
+  const handleRemoveRecentSearch = (index, e) => {
+    e.stopPropagation(); // Prevent triggering the search when clicking remove
+    const newSearches = recentSearches.filter((_, i) => i !== index);
+    setRecentSearches(newSearches);
+    localStorage.setItem('recentNutritionSearches', JSON.stringify(newSearches));
+    toast.info('Search removed from history');
   };
 
   const handleRecentSearch = (searchQuery) => {
@@ -132,7 +297,29 @@ const NutritionSearch = () => {
   };
 
   const formatNutrient = (value, unit = "g") => {
-    return value ? `${Math.round(value * 10) / 10}${unit}` : "N/A";
+    if (value === null || value === undefined || value === '') return "N/A";
+    
+    // If it's already a string, return as is (might be already formatted)
+    if (typeof value === 'string') return value;
+    
+    // Handle both direct values and nutrient objects with quantity/unit
+    const quantity = typeof value === 'object' && value !== null ? 
+      (value.quantity || value.amount || 0) : 
+      (typeof value === 'number' ? value : 0);
+      
+    const finalUnit = typeof value === 'object' && value !== null ? 
+      (value.unit || unit) : 
+      unit;
+    
+    // Round to 1 decimal place if needed
+    const roundedValue = Math.round(quantity * 10) / 10;
+    
+    // Remove decimal if it's .0
+    const displayValue = roundedValue % 1 === 0 ? 
+      Math.round(roundedValue) : 
+      roundedValue;
+    
+    return `${displayValue}${finalUnit}`;
   };
 
   // Tabs component
@@ -258,13 +445,21 @@ const NutritionSearch = () => {
           </h2>
           <div className="flex flex-wrap gap-2">
             {recentSearches.map((item, index) => (
-              <button
-                key={index}
-                onClick={() => handleRecentSearch(item.query)}
-                className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors"
-              >
-                {item.query}
-              </button>
+              <div key={index} className="relative group">
+                <button
+                  onClick={() => handleRecentSearch(item.query)}
+                  className="pl-3 pr-8 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-sm transition-colors flex items-center"
+                >
+                  {item.query}
+                </button>
+                <button
+                  onClick={(e) => handleRemoveRecentSearch(index, e)}
+                  className="absolute right-1.5 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Remove from history"
+                >
+                  <FaTimes size={12} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -272,14 +467,62 @@ const NutritionSearch = () => {
     </>
   );
 
+  // Format a number to a fixed number of decimal places if needed
+  const formatNumber = (num, decimals = 1) => {
+    if (num === undefined || num === null) return '0';
+    const numValue = typeof num === 'object' ? num.quantity || 0 : Number(num) || 0;
+    return numValue % 1 === 0 ? numValue.toString() : numValue.toFixed(decimals);
+  };
+  
+  // Get color intensity based on nutrient value
+  const getNutrientColor = (value, highThreshold = 10, inverse = false) => {
+    if (value === 0) return 'text-gray-500';
+    if (inverse) {
+      return value > highThreshold ? 'text-red-400 font-medium' : 'text-green-400';
+    }
+    return value > highThreshold ? 'text-green-400 font-medium' : 'text-gray-300';
+  };
+
   // Render food details
   const renderFoodDetails = () => {
     if (!selectedFood) return null;
 
     const isSaved = isFoodSaved(selectedFood);
+    const nutrients = selectedFood.nutrients || {};
+    
+    // Helper to get nutrient value with fallback
+    const getNutrient = (key, fallback = { quantity: 0 }) => {
+      const nutrient = nutrients[key] || fallback;
+      return {
+        quantity: Number(nutrient.quantity || 0),
+        unit: nutrient.unit || fallback.unit || ''
+      };
+    };
+    
+    // Get all nutrients with proper fallbacks
+    const protein = getNutrient('PROCNT', { quantity: 0, unit: 'g' });
+    const carbs = getNutrient('CHOCDF', { quantity: 0, unit: 'g' });
+    const fat = getNutrient('FAT', { quantity: 0, unit: 'g' });
+    const fiber = getNutrient('FIBTG', { quantity: 0, unit: 'g' });
+    const sugar = getNutrient('SUGAR', { quantity: 0, unit: 'g' });
+    
+    const vitaminA = getNutrient('VITA_RAE', getNutrient('VIT_RAE', { quantity: 0, unit: 'mcg' }));
+    const vitaminC = getNutrient('VITC', { quantity: 0, unit: 'mg' });
+    const vitaminD = getNutrient('VITD', { quantity: 0, unit: 'mcg' });
+    const vitaminE = getNutrient('TOCPHA', { quantity: 0, unit: 'mg' });
+    
+    const calcium = getNutrient('CA', { quantity: 0, unit: 'mg' });
+    const iron = getNutrient('FE', { quantity: 0, unit: 'mg' });
+    const potassium = getNutrient('K', { quantity: 0, unit: 'mg' });
+    const sodium = getNutrient('NA', { quantity: 0, unit: 'mg' });
+    
+    // Calculate calories from macros if not provided
+    const calories = selectedFood.calories || 
+      (protein.quantity * 4 + carbs.quantity * 4 + fat.quantity * 9);
 
     return (
       <div className="bg-gray-800 rounded-xl p-6 shadow-xl mb-8">
+        {/* Food Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 pb-6 border-b border-gray-700">
           <div>
             <div className="flex items-center gap-3">
@@ -309,7 +552,7 @@ const NutritionSearch = () => {
           </div>
           <div className="mt-4 md:mt-0 bg-blue-900/30 px-4 py-2 rounded-lg">
             <div className="text-3xl font-bold text-blue-400">
-              {Math.round(selectedFood.calories)}{" "}
+              {Math.round(selectedFood.calories || 0)}{" "}
               <span className="text-sm font-normal text-gray-400">
                 calories
               </span>
@@ -317,135 +560,127 @@ const NutritionSearch = () => {
           </div>
         </div>
 
+        {/* Nutrition Information */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Macronutrients */}
           <div className="bg-gray-700/50 p-4 rounded-lg">
-            <div className="flex items-center mb-2">
+            <div className="flex items-center mb-4">
               <FaFire className="text-red-400 mr-2" />
-              <h3 className="font-semibold">Macronutrients</h3>
+              <h3 className="text-lg font-semibold">Macronutrients (per 100g)</h3>
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center py-1 border-b border-gray-700/50">
                 <span className="text-gray-400">Protein</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.PROCNT?.quantity
-                  )}
+                <span className={`${getNutrientColor(protein.quantity, 10)}`}>
+                  {formatNumber(protein.quantity)} {protein.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Carbs</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.CHOCDF?.quantity
-                  )}
+              <div className="flex justify-between items-center py-1 border-b border-gray-700/50">
+                <span className="text-gray-400">Carbohydrates</span>
+                <span className={getNutrientColor(carbs.quantity, 10)}>
+                  {formatNumber(carbs.quantity)} {carbs.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
+
+              <div className="flex justify-between items-center py-1 border-b border-gray-700/50">
                 <span className="text-gray-400">Fats</span>
-                <span>
-                  {formatNutrient(selectedFood.totalNutrients?.FAT?.quantity)}
+                <span className={getNutrientColor(fat.quantity, 5)}>
+                  {formatNumber(fat.quantity)} {fat.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
+
+              <div className="flex justify-between items-center py-1 border-b border-gray-700/50">
                 <span className="text-gray-400">Fiber</span>
-                <span>
-                  {formatNutrient(selectedFood.totalNutrients?.FIBTG?.quantity)}
+                <span className={getNutrientColor(fiber.quantity, 3)}>
+                  {formatNumber(fiber.quantity)} {fiber.unit}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-gray-700/50">
+                <span className="text-gray-400">Sugars</span>
+                <span className={getNutrientColor(sugar.quantity, 5)}>
+                  {formatNumber(sugar.quantity)} {sugar.unit}
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Vitamins */}
           <div className="bg-gray-700/50 p-4 rounded-lg">
-            <div className="flex items-center mb-2">
+            <div className="flex items-center mb-4">
               <FaCarrot className="text-green-400 mr-2" />
-              <h3 className="font-semibold">Vitamins</h3>
+              <h3 className="text-lg font-semibold">Vitamins</h3>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Vitamin A</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.VITA_RAE?.quantity,
-                    "mcg"
-                  )}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Vitamin A</span>
+                <span className={getNutrientColor(vitaminA.quantity, 5)}>
+                  {formatNumber(vitaminA.quantity)} {vitaminA.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Vitamin C</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.VITC?.quantity,
-                    "mg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Vitamin C</span>
+                <span className={getNutrientColor(vitaminC.quantity, 5)}>
+                  {formatNumber(vitaminC.quantity)} {vitaminC.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Vitamin D</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.VITD?.quantity,
-                    "mcg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Vitamin D</span>
+                <span className={getNutrientColor(vitaminD.quantity, 5)}>
+                  {formatNumber(vitaminD.quantity)} {vitaminD.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Vitamin E</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.TOCPHA?.quantity,
-                    "mg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Vitamin E</span>
+                <span className={getNutrientColor(vitaminE.quantity, 5)}>
+                  {formatNumber(vitaminE.quantity)} {vitaminE.unit}
                 </span>
               </div>
             </div>
           </div>
 
+          {/* Minerals */}
           <div className="bg-gray-700/50 p-4 rounded-lg">
-            <div className="flex items-center mb-2">
+            <div className="flex items-center mb-4">
               <FaWeight className="text-purple-400 mr-2" />
-              <h3 className="font-semibold">Minerals</h3>
+              <h3 className="text-lg font-semibold">Minerals</h3>
             </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-gray-400">Calcium</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.CA?.quantity,
-                    "mg"
-                  )}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Calcium</span>
+                <span className={getNutrientColor(calcium.quantity, 50)}>
+                  {formatNumber(calcium.quantity)} {calcium.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Iron</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.FE?.quantity,
-                    "mg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Iron</span>
+                <span className={getNutrientColor(iron.quantity, 2)}>
+                  {formatNumber(iron.quantity)} {iron.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Potassium</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.K?.quantity,
-                    "mg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Potassium</span>
+                <span className={getNutrientColor(potassium.quantity, 200)}>
+                  {formatNumber(potassium.quantity)} {potassium.unit}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-400">Sodium</span>
-                <span>
-                  {formatNutrient(
-                    selectedFood.totalNutrients?.NA?.quantity,
-                    "mg"
-                  )}
+
+              <div className="flex justify-between items-center py-1">
+                <span className="text-gray-400 text-sm">Sodium</span>
+                <span className={getNutrientColor(sodium.quantity, 200, true)}>
+                  {formatNumber(sodium.quantity)} {sodium.unit}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Serving Information */}
         <div className="bg-gray-700/30 p-4 rounded-lg">
           <h3 className="font-semibold mb-3">Serving Information</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -454,19 +689,12 @@ const NutritionSearch = () => {
               <div className="font-medium">100g</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">Calories from Fat</div>
-              <div className="font-medium">
-                {Math.round(
-                  (selectedFood.totalNutrients?.FAT?.quantity || 0) * 9
-                )}{" "}
-                cal
-              </div>
+              <div className="text-sm text-gray-400">Calories</div>
+              <div className="font-medium">{Math.round(calories)} cal</div>
             </div>
             <div>
-              <div className="text-sm text-gray-400">Sugars</div>
-              <div className="font-medium">
-                {formatNutrient(selectedFood.totalNutrients?.SUGAR?.quantity)}
-              </div>
+              <div className="text-sm text-gray-400">Calories from Fat</div>
+              <div className="font-medium">{Math.round(fat.quantity * 9)} cal</div>
             </div>
           </div>
         </div>
@@ -483,11 +711,17 @@ const NutritionSearch = () => {
           renderSavedFoods()
         ) : (
           <>
+            {error && (
+              <div className="bg-red-900/30 border border-red-700 text-red-100 p-4 rounded-lg mb-6">
+                {error}
+              </div>
+            )}
+
             {renderSearchInterface()}
             {selectedFood && renderFoodDetails()}
 
             {/* No Results */}
-            {!loading && query && results.length === 0 && (
+            {!loading && query && results.length === 0 && !selectedFood && (
               <div className="text-center py-12">
                 <FaUtensils className="mx-auto text-5xl text-gray-600 mb-4" />
                 <h3 className="text-xl font-medium mb-2">No results found</h3>
